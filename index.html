@@ -104,8 +104,6 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
     <button class="close" onclick="document.getElementById('ovMenu').classList.remove('open')">✕</button>
     <h3>Menu</h3>
     <button onclick="document.getElementById('ovMenu').classList.remove('open');openSync()">🔄 Sincronização</button>
-    <button onclick="document.getElementById('ovMenu').classList.remove('open');restaurarPlanilha()">↩︎ Restaurar meses da planilha (jan–jul)</button>
-    <button onclick="document.getElementById('ovMenu').classList.remove('open');restaurarPlanilha()">♻️ Restaurar meses da planilha</button>
     <button onclick="document.getElementById('ovMenu').classList.remove('open');openFontes()">🔌 Fontes de dados</button>
   </div>
 </div>
@@ -197,7 +195,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=12; var APP_DATE='04/08/2026';
+var APP_VER=13; var APP_DATE='04/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -455,20 +453,6 @@ var MESES_PLANILHA=[
  {mes:'JULHO/2026',ganho:0,desp:0}
 ];
 function manuais(){ return toArr(state.manuais) }
-function restaurarPlanilha(){
- ask('Restaurar meses da planilha',
-  'Isso lança de novo os meses que vieram da planilha antiga (janeiro a julho).\n\nMeses que já existirem não são duplicados nem alterados.',
-  'Restaurar',function(){
-   var lista=manuais().slice();
-   var existentes={}; lista.forEach(function(x){ existentes[String(x.mes).toUpperCase()]=true });
-   var n=0;
-   MESES_PLANILHA.forEach(function(p){
-    if(!existentes[p.mes]){ lista.push({id:uid(),mes:p.mes,ganho:p.ganho,desp:p.desp}); n++ }
-   });
-   state.manuais=lista; save(); render();
-   toast(n?(n+' mes'+(n>1?'es':'')+' restaurado'+(n>1?'s':'')+' ✓'):'Nenhum mês faltando');
- });
-}
 function garantirManuais(){
  if(state.semeado) return;                    /* semeia uma única vez na vida do app */
  if(!manuais().length) state.manuais=MESES_PLANILHA.slice();
