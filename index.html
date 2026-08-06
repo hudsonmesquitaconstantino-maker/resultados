@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Resultado">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="apple-touch-icon" sizes="512x512" href="icone.png">
+<title>Resultado</title>
+<style>
+:root{--bg:#EEF1F5;--ink:#111820;--muted:#6B7683;--line:#DDE3EA;
+ --green:#0E9F5D;--green-bg:#E3F6EC;--red:#C0392B;--red-bg:#FBEBEA;
+ --blue:#1B2A4A;--primary:#128C50;--amber:#F4A428;--amber-bg:#FEF3E0;
+ --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:16px;overscroll-behavior-y:none}
+body{padding-bottom:24px}
+header{position:sticky;top:0;z-index:50;background:rgba(238,241,245,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:10px 14px 0;border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.htitle{font-size:20px;font-weight:900;letter-spacing:-.5px}
+#verTag{font-size:10px;color:#9AA3AE;margin:1px 0 6px}
+.menubtn{font:inherit;font-size:15px;font-weight:800;border:1px solid var(--line);background:#fff;
+  border-radius:10px;padding:5px 10px;cursor:pointer;line-height:1}
+.syncpill{font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;background:#EDEFF2;color:var(--muted);cursor:pointer;white-space:nowrap}
+.syncpill.on{background:var(--green-bg);color:var(--green)}
+.syncpill.wait{background:var(--amber-bg);color:#A96C00}
+.tabs{display:flex;gap:6px;padding-bottom:8px}
+.tabs button{flex:1;font:inherit;font-size:13px;font-weight:800;padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
+.tabs button.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+main{padding:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:12px;font-weight:900;letter-spacing:.5px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.big{font-family:var(--mono);font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.1}
+.big.g{color:var(--green)} .big.r{color:var(--red)}
+.sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+.lin{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid #F1F4F7;font-size:14px}
+.lin:last-child{border-bottom:none}
+.lin .v{font-family:var(--mono);font-weight:800;white-space:nowrap}
+.lin .v.g{color:var(--green)} .lin .v.r{color:var(--red)}
+.lin .n{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-top:10px;margin-top:6px;border-top:2px solid var(--line);font-weight:900}
+.tot .v{font-family:var(--mono);font-size:18px}
+.chip{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;background:#EEF2F6;color:var(--muted);letter-spacing:.3px}
+.chip.g{background:var(--green-bg);color:var(--green)}
+.chip.r{background:var(--red-bg);color:var(--red)}
+.catpick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.catpick button{flex:1;min-width:74px;font:inherit;font-size:12px;font-weight:800;padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:#F6F8FA;color:var(--muted);cursor:pointer;line-height:1.3}
+.catpick button.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+.mv{border:none;background:#EEF2F6;color:var(--muted);font-size:12px;font-weight:800;border-radius:8px;padding:3px 7px;margin-left:6px;cursor:pointer}
+.slider{width:100%;margin:10px 0 4px}
+.dayrow{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;color:var(--muted)}
+.item{display:flex;align-items:center;gap:6px;padding:5px 0}
+.item input{font:inherit;font-size:14px;border:1px solid transparent;background:#F6F8FA;border-radius:9px;padding:9px 7px;min-width:0}
+.item input:focus{outline:none;background:#fff;border-color:var(--primary)}
+.item .nm{flex:1;min-width:30px}
+.item .vl{width:118px;flex:none;text-align:right;font-family:var(--mono);font-weight:800;font-size:13px}
+.item .del{width:22px;flex:none;border:none;background:transparent;color:#B9C1CA;font-size:18px;cursor:pointer}
+.addLine{display:block;width:100%;margin-top:8px;padding:11px;border:1px dashed var(--line);background:transparent;border-radius:10px;color:var(--muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.auto{background:#F7FAFC;border-radius:10px;padding:10px;margin-top:8px}
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(15,23,32,.45);display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;position:relative}
+.sheet h3{font-size:18px;font-weight:900;margin-bottom:10px}
+.sheet .close{position:absolute;right:12px;top:12px;width:32px;height:32px;border-radius:50%;border:none;background:#EFF2F5;font-size:16px;cursor:pointer}
+.askMsg{font-size:14px;color:var(--muted);line-height:1.55;white-space:pre-line;margin-bottom:14px}
+.lbl{font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 4px}
+.field,textarea.field{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:11px;padding:12px;background:#F8FAFB}
+textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
+.field:focus{outline:none;border-color:var(--primary);background:#fff}
+.row{display:flex;gap:8px;margin-top:16px}
+.btn{font:inherit;font-weight:800;border-radius:12px;padding:13px 16px;border:1px solid var(--line);background:#fff;cursor:pointer;flex:1}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.ghost{background:#F2F5F7}
+.btn.danger{background:var(--red-bg);color:var(--red);border-color:#E7B9BF}
+.menu button{display:block;width:100%;text-align:left;font:inherit;font-size:15px;font-weight:600;background:#F7F9FA;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer}
+.empty{text-align:center;color:var(--muted);font-size:14px;padding:22px 12px;line-height:1.6}
+#toast{position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);z-index:200;background:#1D2630;color:#fff;font-size:14px;font-weight:700;padding:12px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="htitle">RESULTADO</div>
+    <span style="display:flex;align-items:center;gap:8px"><span class="syncpill" id="syncPill" onclick="openSync()">⚪ sem sync</span><button class="menubtn" onclick="openMenu()">☰</button></span>
+  </div>
+  <div id="verTag"></div>
+  <div class="tabs">
+    <button id="tb-saldo" onclick="setTab('saldo')">💰 Saldo</button>
+    <button id="tb-mes" onclick="setTab('mes')">📊 Mês</button>
+    <button id="tb-patr" onclick="setTab('patr')">🏠 Patrimônio</button>
+  </div>
+</header>
+
+<main id="view"></main>
+
+
+
+<div class="overlay" id="ovMenu" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet menu">
+    <button class="close" onclick="document.getElementById('ovMenu').classList.remove('open')">✕</button>
+    <h3>Menu</h3>
+    <button onclick="document.getElementById('ovMenu').classList.remove('open');openSync()">🔄 Sincronização</button>
+    <button onclick="document.getElementById('ovMenu').classList.remove('open');restaurarPlanilha()">↩︎ Restaurar meses da planilha (jan–jul)</button>
+    <button onclick="document.getElementById('ovMenu').classList.remove('open');restaurarPlanilha()">♻️ Restaurar meses da planilha</button>
+    <button onclick="document.getElementById('ovMenu').classList.remove('open');openFontes()">🔌 Fontes de dados</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovSync" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <button class="close" onclick="document.getElementById('ovSync').classList.remove('open')">✕</button>
+    <h3>Sincronização</h3>
+    <div class="askMsg" id="syncStatusMsg"></div>
+    <div class="lbl">Configuração do Firebase</div>
+    <textarea class="field" id="syncCfgInput" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
+    <div class="lbl">Chave da família (a mesma dos outros apps)</div>
+    <input class="field" id="syncKeyInput" placeholder="ex.: guimas-familia-2026" autocapitalize="none">
+    <div class="row">
+      <button class="btn ghost" onclick="disableSync()">Desativar</button>
+      <button class="btn primary" onclick="saveSyncSetup()">Salvar e conectar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovFontes" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <button class="close" onclick="document.getElementById('ovFontes').classList.remove('open')">✕</button>
+    <h3>Fontes de dados</h3>
+    <div class="askMsg">Este app só LÊ os outros três. Nada é alterado neles.</div>
+    <div id="fontesInfo"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovMes" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <button class="close" onclick="document.getElementById('ovMes').classList.remove('open')">✕</button>
+    <h3 id="mesTitulo">Lançar mês antigo</h3>
+    <div class="askMsg">Use para os meses anteriores ao app (da planilha). Os meses novos entram sozinhos.</div>
+    <div class="lbl">Mês (ex.: ABRIL/2026)</div>
+    <input class="field" id="msMes" placeholder="MÊS/ANO" maxlength="16">
+    <div class="lbl">Ganhos do mês</div>
+    <input class="field" id="msGanho" inputmode="text" placeholder="ex.: 100.439,85">
+    <div class="lbl">Despesas do mês</div>
+    <input class="field" id="msDesp" inputmode="text" placeholder="ex.: 80.968,25">
+    <div class="row">
+      <button class="btn danger" id="msDel" onclick="delMes()">Excluir</button>
+      <button class="btn primary" onclick="salvarMes()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovMedia" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <button class="close" onclick="document.getElementById('ovMedia').classList.remove('open')">✕</button>
+    <h3>Média semanal</h3>
+    <div class="askMsg" id="mdInfo"></div>
+    <div class="lbl">Quanto entra por semana, em média</div>
+    <input class="field" id="mdVal" inputmode="text" placeholder="ex.: 22.000,00">
+    <div class="row">
+      <button class="btn ghost" onclick="usarMediaAuto()">Usar a média automática</button>
+      <button class="btn primary" onclick="salvarMedia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovBem" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sheet">
+    <button class="close" onclick="document.getElementById('ovBem').classList.remove('open')">✕</button>
+    <h3>Novo bem</h3>
+    <div class="lbl">Descrição</div>
+    <input class="field" id="bmNome" placeholder="ex.: Casa em Itaipuaçu">
+    <div class="lbl">Valor</div>
+    <input class="field" id="bmVal" inputmode="text" placeholder="ex.: 1.000.000,00">
+    <div class="row">
+      <button class="btn ghost" onclick="document.getElementById('ovBem').classList.remove('open')">Cancelar</button>
+      <button class="btn primary" onclick="saveBem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovAsk" onclick="if(event.target===this)askAnswer(false)">
+  <div class="sheet">
+    <h3 id="askTitle"></h3>
+    <div class="askMsg" id="askMsg"></div>
+    <div class="row">
+      <button class="btn ghost" onclick="askAnswer(false)">Cancelar</button>
+      <button class="btn primary" id="askOk" onclick="askAnswer(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
+var APP_VER=12; var APP_DATE='04/08/2026';
+var KEY='guimas_consolidado_v1';
+var TAB='saldo', askCb=null, BM_ID=null;
+/* estado PRÓPRIO (único que este app escreve) */
+var MEUS_PADRAO=['LQZ6C72','OYZ9079','QUB5B64','RJZ1B66'];
+var state={rev:0,dev:'',bens:[],meus:MEUS_PADRAO.slice(),media:null,inicio:null,manuais:null,semeado:false};
+/* espelhos SOMENTE LEITURA dos outros apps */
+var SEM=null, DESP=null, GEST=null;
+
+function uid(){return Math.random().toString(36).slice(2,9)}
+function fmt(c){var n=c<0,a=Math.abs(c)/100;return (n?'-':'')+'R$'+a.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function parseVal(s){if(!s)return 0;s=String(s).trim().replace(/R\$\s?/gi,'');var n=/^-/.test(s);s=s.replace(/-/g,'').replace(/\./g,'').replace(',','.');var v=parseFloat(s);if(isNaN(v))v=0;return Math.round(v*100)*(n?-1:1)}
+function rawVal(v){return v?(v/100).toFixed(2).replace('.',','):''}
+function norPlaca(p){return String(p==null?'':p).toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function toArr(x){if(Array.isArray(x))return x;if(x&&typeof x==='object')return Object.keys(x).sort(function(a,b){return a-b}).map(function(k){return x[k]});return []}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2200)}
+function ask(t,m,ok,cb){document.getElementById('askTitle').textContent=t;document.getElementById('askMsg').textContent=m;document.getElementById('askOk').textContent=ok||'Confirmar';askCb=cb;document.getElementById('ovAsk').classList.add('open')}
+function askAnswer(y){document.getElementById('ovAsk').classList.remove('open');var cb=askCb;askCb=null;if(y&&cb)cb()}
+function openMenu(){document.getElementById('ovMenu').classList.add('open')}
+function hoje(){return new Date().getDate()}
+
+/* ---------- leitura do SEMANAL (ganhos) ---------- */
+function semRecebidoAtual(){
+ if(!SEM) return 0;
+ var t=0;
+ toArr(SEM.drivers).forEach(function(d){
+  toArr(d&&d.entries).forEach(function(e){ if(e&&e.s==='paid') t+=(e.v||0) });
+ });
+ return t;
+}
+function semPendenteAtual(){
+ if(!SEM) return 0;
+ var t=0;
+ toArr(SEM.drivers).forEach(function(d){
+  toArr(d&&d.entries).forEach(function(e){ if(e&&e.s!=='paid') t+=(e.v||0) });
+ });
+ return t;
+}
+function mesRef(){ /* mês de referência: o mês aberto nas Despesas, ou o mês do sistema */
+ var m=(DESP&&DESP.month)||'';
+ var k=String(m).toUpperCase().split('/');
+ var i=MESES.indexOf(k[0]), y=parseInt(k[1],10);
+ if(i>=0&&!isNaN(y)) return {m:i+1,y:y,label:MESES[i]+'/'+y};
+ var d=new Date();
+ return {m:d.getMonth()+1,y:d.getFullYear(),label:MESES[d.getMonth()]+'/'+d.getFullYear()};
+}
+function dentroDoMes(dataStr){ /* 'dd/mm/aaaa' pertence ao mês de referência? */
+ var p=String(dataStr||'').split('/');
+ var mm=parseInt(p[1],10), yy=parseInt(p[2],10);
+ var r=mesRef();
+ return mm===r.m&&yy===r.y;
+}
+/* ---- rateio: cada semana vale (total ÷ dias da semana) por dia, e cada dia cai no seu mês ---- */
+function parseDMY(s){
+ var p=String(s||'').split('/');
+ var d=parseInt(p[0],10), m=parseInt(p[1],10), y=parseInt(p[2],10);
+ if(isNaN(d)||isNaN(m)||isNaN(y)) return null;
+ return new Date(y,m-1,d);
+}
+var DIAS_CURTO=['dom','seg','ter','qua','qui','sex','sáb'];
+var FIM_SEMANA=3; /* quarta-feira: dia em que a semana fecha */
+function ancorarQuarta(d){ /* joga a data para a quarta-feira mais próxima */
+ if(!d) return null;
+ var dif=(FIM_SEMANA-d.getDay()+7)%7;
+ if(dif>3) dif-=7;
+ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+dif);
+}
+function periodoSemana(w){
+ /* o título da semana é a QUARTA final; o período são os 7 dias que terminam nela */
+ var p=String((w&&w.week)||'').split('/');
+ var d=parseInt(p[0],10), m=parseInt(p[1],10);
+ var fech=parseDMY(w&&w.closedAt);
+ var fim=null;
+ if(!isNaN(d)&&!isNaN(m)){
+  var ano=fech?fech.getFullYear():mesRef().y;
+  fim=new Date(ano,m-1,d);
+  if(fech&&fim-fech>20*86400000) fim=new Date(ano-1,m-1,d);
+ }
+ if(!fim&&fech) fim=new Date(fech.getTime()-1*86400000);
+ if(!fim) return null;
+ fim=ancorarQuarta(fim);
+ return {ini:new Date(fim.getFullYear(),fim.getMonth(),fim.getDate()-6),fim:fim,dias:7};
+}
+function fmtDia(d){ return d?('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2):'—' }
+function periodoTxt(p){ return p?fmtDia(p.ini)+' a '+fmtDia(p.fim):'—' }
+function diasNoMesRef(ini,fim){
+ var r=mesRef(), n=0;
+ for(var t=new Date(ini.getTime()); t<=fim; t=new Date(t.getTime()+86400000)){
+  if(t.getMonth()+1===r.m&&t.getFullYear()===r.y) n++;
+ }
+ return n;
+}
+function rateioSemana(w){ /* quanto do valor da semana pertence ao mês de referência */
+ var p=periodoSemana(w); if(!p||!p.dias) return 0;
+ var dentro=diasNoMesRef(p.ini,p.fim);
+ if(!dentro) return 0;
+ return Math.round((w.paid||0)*dentro/p.dias);
+}
+function semFechadasNovas(){ /* semanas com dias no mês de referência, a partir do marco inicial */
+ if(!SEM) return [];
+ return toArr(SEM.history).filter(function(w){ return w&&rateioSemana(w)>0&&semanaDepoisDoInicio(w) });
+}
+/* semana em aberto: rótulo é o início, 7 dias */
+function periodoAberto(){
+ return periodoSemana({week:(SEM&&SEM.week)||'',closedAt:''})||
+        (function(){var r=mesRef();var f=ancorarQuarta(new Date(r.y,r.m-1,1));
+                    return {ini:new Date(f.getFullYear(),f.getMonth(),f.getDate()-6),fim:f,dias:7}})();
+}
+function fracaoAberta(){
+ var p=periodoAberto();
+ return diasNoMesRef(p.ini,p.fim)/p.dias;
+}
+/* ---------- leitura das DESPESAS ---------- */
+function despPagoAtual(){
+ if(!DESP) return 0;
+ var t=0; toArr(DESP.items).forEach(function(i){ if(i&&i.s==='paid') t+=(i.v||0) });
+ return t;
+}
+function despPendentes(){
+ if(!DESP) return [];
+ return toArr(DESP.items).filter(function(i){return i&&i.s!=='paid'});
+}
+function despFechadosNovos(){ /* nada do histórico entra: o mês corrente é o das Despesas em aberto */
+ return [];
+}
+/* ---------- SALDO ---------- */
+function entradas(){
+ var t=Math.round(semRecebidoAtual()*fracaoAberta());
+ semFechadasNovas().forEach(function(w){ t+=rateioSemana(w) });
+ return t;
+}
+function saidas(){
+ var t=despPagoAtual();
+ despFechadosNovos().forEach(function(m){ t+=(m.paid||0) });
+ return t;
+}
+function saldo(){ return entradas()-saidas() }
+/* projeção: saldo + o que ainda entra − contas que vencem até o dia escolhido */
+function contasAte(dia){
+ var t=0;
+ despPendentes().forEach(function(i){
+  var d=parseInt(i.day,10);
+  if(!isNaN(d)&&d<=dia) t+=(i.v||0);
+ });
+ return t;
+}
+/* média do que entra por semana — calculada das últimas semanas fechadas */
+function semanasDaMedia(){
+ if(!SEM) return [];
+ return toArr(SEM.history).filter(function(w){return w&&w.paid>0&&semanaDepoisDoInicio(w)}).slice(0,4);
+}
+function mediaSemanalAuto(){
+ var hs=semanasDaMedia();
+ if(hs.length){ var t=0; hs.forEach(function(w){t+=w.paid}); return Math.round(t/hs.length) }
+ /* ainda não fechou nenhuma semana desde o início: usa a semana em aberto como referência */
+ var base=semRecebidoAtual()+semPendenteAtual();
+ return base>0?base:0;
+}
+function origemMedia(){
+ var n=semanasDaMedia().length;
+ if(state.media) return 'definida por você';
+ return n?('média das últimas '+n+' semana'+(n>1?'s':'')+' fechada'+(n>1?'s':'')):'base: total da semana em aberto (ainda não fechou semana desde o início)';
+}
+function mediaSemanal(){ return (typeof state.media==='number'&&state.media>0)?state.media:mediaSemanalAuto() }
+function diasNoMes(){ var r=mesRef(); return new Date(r.y,r.m,0).getDate() }
+function diaHoje(){
+ var d=new Date(), r=mesRef();
+ if(d.getMonth()+1===r.m&&d.getFullYear()===r.y) return d.getDate();
+ return 1;
+}
+/* quantas quartas-feiras (dia de pagamento do semanal) caem entre amanhã e o dia X */
+function quartasAte(dia){
+ var r=mesRef(), n=0;
+ for(var d=diaHoje()+1; d<=dia; d++){
+  if(new Date(r.y,r.m-1,d).getDay()===3) n++;
+ }
+ return n;
+}
+/* previsão de saldo em um dia do mês */
+function quartasDoMes(){ /* todas as quartas-feiras do mês de referência */
+ var r=mesRef(), out=[], fim=diasNoMes();
+ for(var d=1;d<=fim;d++){ if(new Date(r.y,r.m-1,d).getDay()===FIM_SEMANA) out.push(d) }
+ return out;
+}
+function quartasAte(dia){
+ var n=0; quartasDoMes().forEach(function(d){ if(d>diaHoje()&&d<=dia) n++ });
+ return n;
+}
+function fracaoQuarta(diaQuarta){ /* quanto da semana que fecha nesse dia pertence ao mês */
+ var r=mesRef();
+ var fim=new Date(r.y,r.m-1,diaQuarta);
+ var ini=new Date(fim.getFullYear(),fim.getMonth(),fim.getDate()-6);
+ return diasNoMesRef(ini,fim)/7;
+}
+function quartaDaSemanaAberta(){
+ var p=periodoAberto(), r=mesRef();
+ return (p&&p.fim.getMonth()+1===r.m&&p.fim.getFullYear()===r.y)?p.fim.getDate():0;
+}
+function aReceberAberto(){ /* pendente da semana em aberto, na parte que é deste mês */
+ return Math.round(semPendenteAtual()*fracaoAberta());
+}
+function previsao(dia){
+ var qa=quartaDaSemanaAberta(), entra=0, futuras=[];
+ if(qa&&qa<=dia) entra+=aReceberAberto();          /* valor REAL, não média */
+ quartasDoMes().forEach(function(d){
+  if(d>qa&&d<=dia&&d>=diaHoje()){ futuras.push(d); entra+=Math.round(mediaSemanal()*fracaoQuarta(d)) }
+ });
+ return {saldo:saldo()+entra-contasAte(dia), entra:entra, contas:contasAte(dia),
+         qa:(qa&&qa<=dia)?qa:0, futuras:futuras};
+}
+/* pontos de checagem: só os dias em que há conta a vencer, + fim do mês */
+function checkpoints(){
+ var dias={};
+ despPendentes().forEach(function(i){
+  var d=parseInt(i.day,10);
+  if(!isNaN(d)&&d>=diaHoje()) dias[d]=true;
+ });
+ var arr=Object.keys(dias).map(Number).sort(function(a,b){return a-b});
+ var fim=diasNoMes();
+ if(arr.indexOf(fim)<0) arr.push(fim);
+ return arr;
+}
+/* ---------- PATRIMÔNIO ---------- */
+function todosCarros(){
+ if(!GEST) return [];
+ return toArr(GEST.cars||GEST.carros||GEST.frota).filter(function(c){return !!c});
+}
+function ehMeu(c){ return toArr(state.meus).indexOf(norPlaca(c&&c.placa))>=0 }
+function carrosFabio(){ /* patrimônio do pai = TODOS menos os carros do Hudson */
+ return todosCarros().filter(function(c){ return !ehMeu(c) });
+}
+function meusCarros(){ return todosCarros().filter(ehMeu) }
+function toggleMeu(placa){
+ var p=norPlaca(placa), l=toArr(state.meus).slice(), i=l.indexOf(p);
+ if(i>=0) l.splice(i,1); else l.push(p);
+ state.meus=l; save(); render();
+ toast(i>=0?'Movido para a frota Fábio':'Movido para a frota Hudson');
+}
+function semFipe(){ return carrosFabio().filter(function(c){return !(c.valorRef>0)}) }
+function totalCarros(){
+ var t=0; carrosFabio().forEach(function(c){ t+=Math.round((c.valorRef||0)*100) });
+ return t;
+}
+function totalBens(){ var t=0; toArr(state.bens).forEach(function(b){t+=(b.v||0)}); return t }
+function patrimonio(){ return totalBens()+totalCarros() }
+
+/* ---------- marco inicial: o app começa a contar quando é usado pela 1ª vez ---------- */
+var MESES_PLANILHA=[
+ {mes:'JANEIRO/2026',ganho:11286257,desp:8607275},
+ {mes:'FEVEREIRO/2026',ganho:8939734,desp:5783637},
+ {mes:'MARÇO/2026',ganho:9168035,desp:8096825},
+ {mes:'ABRIL/2026',ganho:10043985,desp:0},
+ {mes:'MAIO/2026',ganho:10772485,desp:0},
+ {mes:'JUNHO/2026',ganho:9335186,desp:0},
+ {mes:'JULHO/2026',ganho:0,desp:0}
+];
+function manuais(){ return toArr(state.manuais) }
+function restaurarPlanilha(){
+ ask('Restaurar meses da planilha',
+  'Isso lança de novo os meses que vieram da planilha antiga (janeiro a julho).\n\nMeses que já existirem não são duplicados nem alterados.',
+  'Restaurar',function(){
+   var lista=manuais().slice();
+   var existentes={}; lista.forEach(function(x){ existentes[String(x.mes).toUpperCase()]=true });
+   var n=0;
+   MESES_PLANILHA.forEach(function(p){
+    if(!existentes[p.mes]){ lista.push({id:uid(),mes:p.mes,ganho:p.ganho,desp:p.desp}); n++ }
+   });
+   state.manuais=lista; save(); render();
+   toast(n?(n+' mes'+(n>1?'es':'')+' restaurado'+(n>1?'s':'')+' ✓'):'Nenhum mês faltando');
+ });
+}
+function garantirManuais(){
+ if(state.semeado) return;                    /* semeia uma única vez na vida do app */
+ if(!manuais().length) state.manuais=MESES_PLANILHA.slice();
+ state.semeado=true; save();
+}
+function garantirInicio(){
+ if(state.inicio) return;
+ var d=new Date();
+ state.inicio={y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()};
+ save();
+}
+function dataInicio(){
+ var i=state.inicio; if(!i) return new Date(1970,0,1);
+ return new Date(i.y,i.m-1,i.d);
+}
+function mesInicioLabel(){ var i=state.inicio; return i?MESES[i.m-1]+'/'+i.y:'—' }
+function mesDepoisDoInicio(label){
+ var i=state.inicio; if(!i) return true;
+ var p=String(label||'').toUpperCase().split('/');
+ var mi=MESES.indexOf(p[0]), y=parseInt(p[1],10);
+ if(mi<0||isNaN(y)) return false;
+ return (y>i.y)||(y===i.y&&(mi+1)>=i.m);
+}
+function semanaDepoisDoInicio(w){
+ var p=periodoSemana(w); if(!p) return false;
+ return p.fim>=dataInicio()||(p.fim.getFullYear()===dataInicio().getFullYear()
+   &&p.fim.getMonth()===dataInicio().getMonth()&&p.fim.getDate()>=dataInicio().getDate());
+}
+
+/* ---------- RENDER ---------- */
+function setTab(t){TAB=t;render()}
+function render(){
+ var _sy=0; try{_sy=window.scrollY||window.pageYOffset||0}catch(e){}
+ ['saldo','mes','patr'].forEach(function(t){
+  var b=document.getElementById('tb-'+t); if(b) b.className=(TAB===t?'sel':'');
+ });
+ var h='';
+ if(TAB==='saldo') h=viewSaldo();
+ else if(TAB==='mes') h=viewMes();
+ else h=viewPatr();
+ document.getElementById('view').innerHTML=h;
+ try{window.scrollTo(0,_sy)}catch(e){}
+}
+function fonteAviso(){
+ var faltam=[];
+ if(!SEM) faltam.push('Semanal');
+ if(!DESP) faltam.push('Despesas');
+ if(!faltam.length) return '';
+ return '<div class="card"><div class="sub">⚠️ Ainda não recebi os dados de: '+faltam.join(' e ')
+  +'. Confira se a sincronização está ligada com a mesma chave da família.</div></div>';
+}
+function viewSaldo(){
+ var s=saldo(), ent=entradas(), sai=saidas();
+ var h=fonteAviso();
+ var r=mesRef();
+ h+='<div class="card"><h2>SALDO DE '+esc(r.label)+' <span class="chip">desde o dia 1º</span></h2>'
+  +'<div class="big '+(s<0?'r':'g')+'">'+fmt(s)+'</div>'
+  +'<div class="sub">Entrou '+fmt(ent)+' · Saiu '+fmt(sai)+'</div></div>';
+
+ var det=semFechadasNovas();
+ if(det.length||SEM){
+  h+='<div class="card"><h2>DE ONDE VEM ESSE VALOR</h2>'
+   +'<div class="sub" style="margin:-4px 0 8px">Cada semana é dividida por dia: total ÷ dias da semana = diária. Só os dias que caem em '+esc(r.label.split("/")[0])+' entram aqui.</div>';
+  det.forEach(function(w){
+   var p=periodoSemana(w), dentro=p?diasNoMesRef(p.ini,p.fim):0;
+   h+='<div class="lin"><span class="n">Semana '+esc(w.week)+' · '+periodoTxt(p)+' · '+dentro+' de 7 dias no mês</span>'
+    +'<span class="v g">'+fmt(rateioSemana(w))+'</span></div>';
+  });
+  var pa=periodoAberto(), da=diasNoMesRef(pa.ini,pa.fim);
+  h+='<div class="lin"><span class="n">Semana em aberto · '+periodoTxt(pa)+' · '+da+' de 7 dias no mês</span>'
+   +'<span class="v g">'+fmt(Math.round(semRecebidoAtual()*fracaoAberta()))+'</span></div>'
+   +'<div class="lin"><span class="n">Contas já pagas no mês</span><span class="v r">'+fmt(sai)+'</span></div>'
+   +'<div class="tot"><span>Saldo do mês</span><span class="v '+(s<0?'r':'g')+'">'+fmt(s)+'</span></div>'
+   +'<div class="sub" style="margin-top:10px">💰 Ainda falta receber desta semana: <b>'+fmt(semPendenteAtual())+'</b>'
+   +' — deste mês, '+fmt(aReceberAberto())+' ('+da+' de 7 dias). Entra no saldo conforme for marcado como pago no Semanal.</div></div>';
+ }
+
+ var med=mediaSemanal(), fim=diasNoMes();
+ var pf=previsao(fim);
+ h+='<div class="card"><h2>ATÉ O FIM DO MÊS</h2>'
+  +'<div class="lin"><span class="n">Saldo de hoje</span><span class="v '+(s<0?'r':'g')+'">'+fmt(s)+'</span></div>'
+  +(pf.qa?'<div class="lin"><span class="n">+ A receber da semana que fecha dia '+pf.qa+' (valor real)</span><span class="v g">'+fmt(aReceberAberto())+'</span></div>':'')
+  +(pf.futuras.length?'<div class="lin"><span class="n">+ '+pf.futuras.length+' semana'+(pf.futuras.length===1?'':'s')+' seguinte'+(pf.futuras.length===1?'':'s')+' (fecha'+(pf.futuras.length===1?'':'m')+' dias '+pf.futuras.join(', ')+') × média '+fmt(med)+'</span><span class="v g">'+fmt(pf.entra-(pf.qa?aReceberAberto():0))+'</span></div>':'')
+  +'<div class="lin"><span class="n">− Contas ainda não pagas</span><span class="v r">'+fmt(pf.contas)+'</span></div>'
+  +'<div class="tot"><span>Sobra prevista no fim do mês</span><span class="v '+(pf.saldo<0?'r':'g')+'">'+fmt(pf.saldo)+'</span></div>'
+  +'<div class="sub">Média semanal '+fmt(med)+' ('+origemMedia()+')'
+  +' <button class="mv" onclick="editarMedia()">alterar</button></div></div>';
+
+ var cps=checkpoints();
+ if(cps.length){
+  h+='<div class="card"><h2>DIA A DIA — DÁ PARA PAGAR?</h2>'
+   +'<div class="sub" style="margin:-4px 0 8px">Em cada vencimento, quanto sobra depois de pagar tudo que vence até ali.</div>';
+  cps.forEach(function(d){
+   var p=previsao(d);
+   var contasDoDia=0;
+   despPendentes().forEach(function(i){ if(parseInt(i.day,10)===d) contasDoDia+=(i.v||0) });
+   h+='<div class="lin"><span class="n">'+(p.saldo<0?'⚠️':'✅')+' Dia '+d+(contasDoDia?' · contas '+fmt(contasDoDia):' · fim do mês')+'</span>'
+    +'<span class="v '+(p.saldo<0?'r':'g')+'">'+fmt(p.saldo)+'</span></div>';
+  });
+  var apertado=cps.filter(function(d){return previsao(d).saldo<0});
+  h+='<div class="sub">'+(apertado.length
+    ?'⚠️ Nos dias '+apertado.join(', ')+' o saldo previsto fica negativo. Considere antecipar recebimentos ou adiar alguma conta.'
+    :'✅ Pelo ritmo atual, o mês fecha sem aperto.')+'</div></div>';
+ }
+ var pend=despPendentes().slice().sort(function(a,b){return (parseInt(a.day,10)||99)-(parseInt(b.day,10)||99)});
+ if(pend.length){
+  h+='<div class="card"><h2>PRÓXIMAS CONTAS</h2>';
+  pend.slice(0,12).forEach(function(i){
+   h+='<div class="lin"><span class="n">Dia '+esc(i.day||'--')+' · '+esc(i.desc)+'</span><span class="v r">'+fmt(i.v||0)+'</span></div>';
+  });
+  h+='</div>';
+ }
+ return h;
+}
+function viewMes(){
+ var h=fonteAviso();
+ var mesAtual=(DESP&&DESP.month)||'—';
+ var ganhoAtual=entradas(), despAtual=saidas();
+ h+='<div class="card"><h2>MÊS EM ANDAMENTO <span class="chip">'+esc(mesAtual)+'</span></h2>'
+  +'<div class="sub" style="margin:-4px 0 8px">Contando desde '+esc(mesInicioLabel())+', quando o acompanhamento começou.</div>'
+  +'<div class="lin"><span class="n">Ganhos recebidos no mês (rateados por dia)</span><span class="v g">'+fmt(ganhoAtual)+'</span></div>'
+  +'<div class="lin"><span class="n">Despesas pagas</span><span class="v r">'+fmt(despAtual)+'</span></div>'
+  +'<div class="tot"><span>Resultado parcial</span><span class="v '+((ganhoAtual-despAtual)<0?'r':'g')+'">'+fmt(ganhoAtual-despAtual)+'</span></div></div>';
+ var meses=montaMeses();
+ if(!meses.length) h+='<div class="card"><div class="empty">Nenhum mês fechado desde '+esc(mesInicioLabel())+'.<br>Conforme o Semanal e as Despesas forem fechando, o resultado aparece aqui sozinho.</div>'
+   +'<button class="addLine" onclick="openMes(null)">+ Lançar mês antigo à mão</button></div>';
+ else{
+  var tg=0,td=0; meses.forEach(function(m){tg+=m.ganho;td+=m.desp});
+  h+='<div class="card"><h2>ACUMULADO</h2>'
+   +'<div class="lin"><span class="n">Ganhos ('+meses.length+' mes'+(meses.length>1?'es':'')+')</span><span class="v g">'+fmt(tg)+'</span></div>'
+   +'<div class="lin"><span class="n">Despesas</span><span class="v r">'+fmt(td)+'</span></div>'
+   +'<div class="tot"><span>Resultado acumulado</span><span class="v '+((tg-td)<0?'r':'g')+'">'+fmt(tg-td)+'</span></div></div>';
+  h+='<div class="card"><h2>MESES FECHADOS</h2>';
+  meses.forEach(function(m){
+   var r=m.ganho-m.desp;
+   h+='<div class="lin"><span class="n">'+esc(m.mes)+(m.manual?' <span class="chip">lançado à mão</span>':'')+'</span>'
+    +'<span class="v '+(r<0?'r':'g')+'">'+fmt(r)
+    +(m.manual?' <button class="mv" onclick="openMes(\''+m.mid+'\')">editar</button>':'')+'</span></div>'
+    +'<div class="sub" style="margin:-4px 0 6px">Ganhos '+fmt(m.ganho)+' · Despesas '+fmt(m.desp)+(m.semanas?' · '+m.semanas+' semana'+(m.semanas>1?'s':''):'')+'</div>';
+  });
+  h+='<button class="addLine" onclick="openMes(null)">+ Lançar mês antigo à mão</button></div>';
+ }
+ return h;
+}
+/* junta semanas do Semanal e meses das Despesas pelo MÊS de fechamento */
+var MESES=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function mesDeData(d){ /* 'dd/mm/aaaa' -> 'AGOSTO/2026' */
+ var p=String(d||'').split('/');
+ var mm=parseInt(p[1],10), yy=parseInt(p[2],10);
+ if(isNaN(mm)||isNaN(yy)||mm<1||mm>12) return '';
+ return MESES[mm-1]+'/'+yy;
+}
+function montaMeses(){
+ var mapa={};
+ function add(k,g,dsp,sem){
+  if(!mapa[k])mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
+  mapa[k].ganho+=g; mapa[k].desp+=dsp; mapa[k].semanas+=sem;
+ }
+ if(SEM) toArr(SEM.history).forEach(function(w){
+  if(!w||!semanaDepoisDoInicio(w)) return;
+  var p=periodoSemana(w); if(!p) return;
+  var porDia=(w.paid||0)/7, cont={};
+  for(var t=new Date(p.ini.getTime()); t<=p.fim; t=new Date(t.getFullYear(),t.getMonth(),t.getDate()+1)){
+   var k=MESES[t.getMonth()]+'/'+t.getFullYear();
+   cont[k]=(cont[k]||0)+porDia;
+  }
+  Object.keys(cont).forEach(function(k){ add(k,Math.round(cont[k]),0,1) });
+ });
+ if(DESP) toArr(DESP.history).forEach(function(m){
+  var k=String((m&&m.month)||'').toUpperCase(); if(!k) return;
+  add(k,0,(m.paid||0),0);
+ });
+ var auto=Object.keys(mapa).filter(mesDepoisDoInicio);
+ manuais().forEach(function(m){
+  if(!m||!m.mes) return;
+  var k=String(m.mes).toUpperCase();
+  if(!mapa[k]) mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
+  mapa[k].ganho+=(m.ganho||0); mapa[k].desp+=(m.desp||0); mapa[k].manual=true; mapa[k].mid=m.id;
+  if(auto.indexOf(k)<0) auto.push(k);
+ });
+ var arr=auto.map(function(k){return mapa[k]});
+ arr.sort(function(a,b){
+  var pa=a.mes.split('/'), pb=b.mes.split('/');
+  var ya=parseInt(pa[1],10)||0, yb=parseInt(pb[1],10)||0;
+  if(ya!==yb) return yb-ya;
+  return MESES.indexOf(pb[0])-MESES.indexOf(pa[0]);
+ });
+ return arr;
+}
+function viewPatr(){
+ var carros=carrosFabio(), tc=totalCarros(), tb=totalBens(), tp=patrimonio();
+ var h='<div class="card"><h2>PATRIMÔNIO TOTAL</h2><div class="big">'+fmt(tp)+'</div>'
+  +'<div class="sub">Bens cadastrados '+fmt(tb)+' · Carros pela FIPE '+fmt(tc)+'</div></div>';
+ h+='<div class="card"><h2>BENS <span class="chip">editável</span></h2>';
+ toArr(state.bens).forEach(function(b){
+  h+='<div class="item">'
+   +'<input class="nm" value="'+esc(b.nome)+'" placeholder="descrição" oninput="setBemNome(\''+b.id+'\',this.value)">'
+   +'<input class="vl" value="'+(b.v?fmt(b.v):'')+'" placeholder="R$0,00" onfocus="this.value=rawBem(\''+b.id+'\')" oninput="setBemVal(\''+b.id+'\',this.value)" onblur="blurBem(\''+b.id+'\',this)">'
+   +'<button class="del" onclick="delBem(\''+b.id+'\')">×</button></div>';
+ });
+ if(!toArr(state.bens).length) h+='<div class="empty">Nenhum bem cadastrado.<br>Ex.: casa em Itaipuaçu, casa em São Gonçalo.</div>';
+ h+='<button class="addLine" onclick="openBem()">+ Adicionar bem</button></div>';
+ h+='<div class="card"><h2>FROTA FÁBIO <span class="chip g">FIPE automática</span></h2>';
+ var sf=semFipe();
+ if(sf.length) h+='<div class="sub" style="margin:-4px 0 8px">⚠️ '+sf.length+' carro'+(sf.length>1?'s':'')+' sem valor FIPE no Gestão ('+sf.map(function(c){return esc(c.placa)}).join(', ')+') — preencha lá para entrar na conta.</div>';
+ if(!GEST) h+='<div class="empty">Ainda não recebi os dados do app Gestão.<br>Ligue a sincronização com a mesma chave da família.</div>';
+ else if(!carros.length) h+='<div class="empty">Nenhum carro nas frotas selecionadas.</div>';
+ else{
+  carros.forEach(function(c){
+   h+='<div class="lin"><span class="n">'+esc(c.placa||'')+' · '+esc(c.nome||c.modeloCRLV||'')+'</span>'
+     +'<span class="v">'+fmt(Math.round((c.valorRef||0)*100))
+     +' <button class="mv" onclick="toggleMeu(\''+esc(c.placa)+'\')" title="Mover para a frota Hudson">↔</button></span></div>';
+  });
+  h+='<div class="tot"><span>'+carros.length+' carro'+(carros.length>1?'s':'')+'</span><span class="v">'+fmt(tc)+'</span></div>';
+ }
+ h+='</div>';
+ var meus=meusCarros();
+ if(GEST){
+  var tm=0; meus.forEach(function(c){tm+=Math.round((c.valorRef||0)*100)});
+  h+='<div class="card"><h2>FROTA HUDSON <span class="chip">fora do patrimônio do Fábio</span></h2>';
+  if(!meus.length) h+='<div class="empty">Nenhum carro na frota Hudson.</div>';
+  else{
+   meus.forEach(function(c){
+    h+='<div class="lin"><span class="n">'+esc(c.placa||'')+' · '+esc(c.nome||'')+'</span>'
+     +'<span class="v">'+fmt(Math.round((c.valorRef||0)*100))
+     +' <button class="mv" onclick="toggleMeu(\''+esc(c.placa)+'\')" title="Mover para a frota Fábio">↔</button></span></div>';
+   });
+   h+='<div class="tot"><span>'+meus.length+' carro'+(meus.length>1?'s':'')+'</span><span class="v">'+fmt(tm)+'</span></div>';
+  }
+  h+='<div class="sub">Use o ↔ para mover um carro entre as duas frotas.</div></div>';
+ }
+ return h;
+}
+var MS_ID=null;
+function openMes(id){
+ MS_ID=id||null;
+ var m=id?manuais().filter(function(x){return x.id===id})[0]:null;
+ document.getElementById('mesTitulo').textContent=m?'Editar mês':'Lançar mês antigo';
+ document.getElementById('msMes').value=m?m.mes:'';
+ document.getElementById('msGanho').value=m?rawVal(m.ganho):'';
+ document.getElementById('msDesp').value=m?rawVal(m.desp):'';
+ document.getElementById('msDel').style.display=m?'block':'none';
+ document.getElementById('ovMes').classList.add('open');
+}
+function salvarMes(){
+ var mes=(document.getElementById('msMes').value||'').trim().toUpperCase();
+ var g=parseVal(document.getElementById('msGanho').value);
+ var d=parseVal(document.getElementById('msDesp').value);
+ var p=mes.split('/');
+ if(MESES.indexOf(p[0])<0||isNaN(parseInt(p[1],10))){toast('⚠️ Escreva assim: ABRIL/2026');return}
+ var lista=manuais().slice();
+ if(MS_ID){ lista.forEach(function(x){ if(x.id===MS_ID){x.mes=mes;x.ganho=g;x.desp=d} }) }
+ else{
+  var ja=null; lista.forEach(function(x){ if(String(x.mes).toUpperCase()===mes) ja=x });
+  if(ja){ ja.ganho=g; ja.desp=d; toast('Mês já existia — atualizado ✓') }
+  else lista.push({id:uid(),mes:mes,ganho:g,desp:d});
+ }
+ state.manuais=lista; save();
+ document.getElementById('ovMes').classList.remove('open'); render(); toast('Mês salvo ✓');
+}
+function delMes(){
+ if(!MS_ID)return;
+ ask('Excluir mês','Remover esse mês lançado à mão do histórico?','Excluir',function(){
+  state.manuais=manuais().filter(function(x){return x.id!==MS_ID});
+  save(); document.getElementById('ovMes').classList.remove('open'); render(); toast('Mês removido');
+ });
+}
+function editarMedia(){
+ document.getElementById('mdInfo').textContent='A média automática é calculada com as últimas semanas fechadas ('+fmt(mediaSemanalAuto())+'). Você pode fixar outro valor se souber que o ritmo vai mudar.';
+ document.getElementById('mdVal').value=state.media?rawVal(state.media):'';
+ document.getElementById('ovMedia').classList.add('open');
+}
+function salvarMedia(){
+ var v=parseVal(document.getElementById('mdVal').value);
+ if(v<=0){toast('⚠️ Informe um valor');return}
+ state.media=v; save();
+ document.getElementById('ovMedia').classList.remove('open'); render(); toast('Média atualizada ✓');
+}
+function usarMediaAuto(){
+ state.media=null; save();
+ document.getElementById('ovMedia').classList.remove('open'); render(); toast('Usando a média automática');
+}
+/* ---------- bens (única coisa que este app grava) ---------- */
+function findBem(id){return toArr(state.bens).filter(function(b){return b.id===id})[0]}
+function rawBem(id){var b=findBem(id);return b?rawVal(b.v):''}
+function blurBem(id,el){var b=findBem(id);if(b)el.value=b.v?fmt(b.v):''}
+function setBemNome(id,v){var b=findBem(id);if(!b)return;b.nome=v;save()}
+function setBemVal(id,v){var b=findBem(id);if(!b)return;b.v=parseVal(v);save();
+ try{var t=document.querySelector('.big');if(t)t.textContent=fmt(patrimonio())}catch(e){}}
+function openBem(){BM_ID=null;document.getElementById('bmNome').value='';document.getElementById('bmVal').value='';document.getElementById('ovBem').classList.add('open')}
+function saveBem(){
+ var n=(document.getElementById('bmNome').value||'').trim();
+ var v=parseVal(document.getElementById('bmVal').value);
+ if(!n){toast('⚠️ Escreva a descrição');return}
+ state.bens=toArr(state.bens); state.bens.push({id:uid(),nome:n,v:v});
+ save(); document.getElementById('ovBem').classList.remove('open'); render(); toast('Bem adicionado ✓');
+}
+function delBem(id){
+ var b=findBem(id); if(!b)return;
+ ask('Excluir bem',(b.nome||'')+' — '+fmt(b.v),'Excluir',function(){
+  state.bens=toArr(state.bens).filter(function(x){return x.id!==id});
+  save();render();toast('Bem excluído');
+ });
+}
+function openFontes(){
+ var f='';
+ function linha(nome,obj,extra){
+  return '<div class="lin"><span class="n">'+nome+'</span><span class="v '+(obj?'g':'r')+'">'+(obj?'conectado':'sem dados')+'</span></div>'
+   +(extra?'<div class="sub" style="margin:-4px 0 6px">'+extra+'</div>':'');
+ }
+ f+=linha('Semanal (ganhos)',SEM,SEM?(toArr(SEM.drivers).length+' motoristas · '+toArr(SEM.history).length+' semanas fechadas'):'');
+ f+=linha('Despesas (contas)',DESP,DESP?(toArr(DESP.items).length+' despesas · '+toArr(DESP.history).length+' meses fechados'):'');
+ f+=linha('Gestão (frota/FIPE)',GEST,GEST?(carrosFabio().length+' carros do Fábio'):'');
+ document.getElementById('fontesInfo').innerHTML=f;
+ document.getElementById('ovFontes').classList.add('open');
+}
+
+/* ================= SINCRONIZAÇÃO ================= */
+var DEV=(function(){try{var d=localStorage.getItem('guimas_dev');if(!d){d=uid()+uid();localStorage.setItem('guimas_dev',d)}return d}catch(e){return uid()}})();
+var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,gotRemote:false,temSync:false};
+function touch(){state.rev=Date.now();state.dev=DEV}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function save(){touch();persist();schedulePush()}
+function mesclar(remoto,local){
+ /* o que o aparelho remoto não enviou (por ser versão antiga) é preservado do local */
+ var o={};
+ for(var k in remoto) if(Object.prototype.hasOwnProperty.call(remoto,k)) o[k]=remoto[k];
+ ['manuais','bens','meus','media','inicio','semeado'].forEach(function(k){
+  var vazioRemoto=(remoto[k]===undefined||remoto[k]===null);
+  var temLocal=(local[k]!==undefined&&local[k]!==null&&!(Array.isArray(local[k])&&!local[k].length));
+  if(vazioRemoto&&temLocal) o[k]=local[k];
+ });
+ return o;
+}
+function norm(s){
+ if(!s||typeof s!=='object')s={};
+ var o={rev:s.rev||0,dev:s.dev||'',bens:[],meus:(s.meus===undefined?MEUS_PADRAO.slice():toArr(s.meus).map(function(p){return norPlaca(p)})),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),manuais:(s.manuais===undefined?null:toArr(s.manuais)),semeado:!!s.semeado};
+ if(s.zero&&typeof s.zero==='object') o.zero={at:s.zero.at||0,sem:toArr(s.zero.sem),desp:toArr(s.zero.desp)};
+ toArr(s.bens).forEach(function(b){ if(b) o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0)}) });
+ return o;
+}
+function load(){try{var r=localStorage.getItem(KEY);if(r)return norm(JSON.parse(r))}catch(e){}return norm({})}
+function syncCfg(){try{return JSON.parse(localStorage.getItem('guimas_consolidado_sync')||'null')}catch(e){return null}}
+function setPill(m,t){var p=document.getElementById('syncPill');p.className='syncpill'+(m?' '+m:'');p.textContent=t}
+function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+function famHash(key){return crypto.subtle.digest('SHA-256',new TextEncoder().encode('guimas:'+key)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')})}
+function startSync(){
+ var cfg=syncCfg();
+ if(!cfg||!cfg.config||!cfg.key){SYNC.temSync=false;setPill('','⚪ sem sync');return}
+ SYNC.temSync=true;
+ setPill('wait','🟡 conectando…');
+ var V='10.14.1',B='https://www.gstatic.com/firebasejs/'+V+'/';
+ var chain=Promise.resolve();
+ if(typeof firebase==='undefined'){
+  chain=loadScript(B+'firebase-app-compat.js')
+   .then(function(){return loadScript(B+'firebase-auth-compat.js')})
+   .then(function(){return loadScript(B+'firebase-database-compat.js')});
+ }
+ chain.then(function(){
+  if(!SYNC.started){firebase.initializeApp(cfg.config);SYNC.started=true}
+  return firebase.auth().signInAnonymously();
+ }).then(function(){ return famHash(cfg.key) })
+ .then(function(h){
+  var db=firebase.database();
+  /* PRÓPRIO — leitura e escrita */
+  SYNC.ref=db.ref('familias/'+h+'/consolidado');
+  SYNC.ref.on('value',function(s){
+   var v=s.val();
+   SYNC.gotRemote=true;
+   if(!v){push();return}
+   if(v.dev===DEV||(v.rev||0)<=(state.rev||0)){ if(SYNC.pendingPush)push(); return }
+   state=norm(v);persist();render();
+   if(SYNC.pendingPush)push();
+   toast('🔄 Atualizado pelo outro aparelho');
+  },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
+  /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
+  db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;render()},function(){});
+  db.ref('familias/'+h+'/despesas').on('value',function(s){DESP=s.val()||null;render()},function(){});
+  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;render()},function(){});
+  db.ref('.info/connected').on('value',function(s){
+   SYNC.online=!!s.val();
+   setPill(SYNC.online?'on':'wait',SYNC.online?'🟢 sincronizado':'🟡 offline');
+   if(SYNC.online&&SYNC.pendingPush)push();
+  });
+ }).catch(function(){setPill('wait','🟡 offline');SYNC.pendingPush=true;setTimeout(startSync,20000)});
+}
+function push(){
+ if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;return} /* espera a nuvem responder */
+ if(!SYNC.ref){SYNC.pendingPush=true;return}SYNC.pendingPush=false;SYNC.ref.set(state).catch(function(){SYNC.pendingPush=true})}
+function schedulePush(){clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1200)}
+function openSync(){
+ var cfg=syncCfg();
+ document.getElementById('syncStatusMsg').textContent=cfg&&cfg.config
+  ?(SYNC.online?'Conectado. Este app apenas LÊ o Semanal, as Despesas e o Gestão.':'Configurado, aguardando conexão.')
+  :'Cole a configuração do Firebase e a mesma chave da família usada nos outros apps.';
+ if(cfg){document.getElementById('syncCfgInput').value=JSON.stringify(cfg.config,null,1);document.getElementById('syncKeyInput').value=cfg.key||''}
+ document.getElementById('ovSync').classList.add('open');
+}
+function parseCfgText(t){t=String(t||'').trim();var a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<0)throw new Error('cfg');t=t.slice(a,b+1);try{return JSON.parse(t)}catch(e){}return (new Function('return ('+t+')'))()}
+function saveSyncSetup(){
+ try{
+  var cfg=parseCfgText(document.getElementById('syncCfgInput').value);
+  var key=document.getElementById('syncKeyInput').value.trim();
+  if(!cfg.apiKey||!cfg.databaseURL){toast('⚠️ Configuração incompleta');return}
+  if(key.length<8){toast('⚠️ Chave muito curta (mín. 8)');return}
+  localStorage.setItem('guimas_consolidado_sync',JSON.stringify({config:cfg,key:key}));
+  document.getElementById('ovSync').classList.remove('open');
+  toast('Sincronização configurada ✓'); startSync();
+ }catch(e){toast('⚠️ Configuração inválida — cole o bloco inteiro com { }')}
+}
+function disableSync(){localStorage.removeItem('guimas_consolidado_sync');SYNC.ref=null;SYNC.started=false;document.getElementById('ovSync').classList.remove('open');setPill('','⚪ sem sync');toast('Sincronização desativada')}
+
+/* ---------- auto-atualização ---------- */
+function safeToReload(){try{var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return false;var o=document.querySelectorAll?document.querySelectorAll('.overlay.open'):[];if(o&&o.length)return false}catch(e){}return true}
+var _updFound=false;
+function checkUpdate(){
+ try{
+  fetch('index.html?upd='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+   var m=t.match(/APP_VER=(\d+)/);
+   if(m&&parseInt(m[1],10)>APP_VER&&!_updFound){
+    _updFound=true;toast('⬆️ Atualizando para a versão nova…');
+    setTimeout(function tr(){ if(safeToReload())location.reload(); else setTimeout(tr,20000) },1500);
+   }
+  }).catch(function(){});
+ }catch(e){}
+}
+setTimeout(checkUpdate,4000);
+try{
+ document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')checkUpdate()});
+ window.addEventListener('pageshow',function(e){if(e&&e.persisted)checkUpdate()});
+ window.addEventListener('focus',function(){checkUpdate()});
+}catch(e){}
+setInterval(checkUpdate,15*60*1000);
+
+/* ---------- início ---------- */
+state=load();
+garantirInicio();
+garantirManuais();
+setTab('saldo');
+try{
+ var vt=document.getElementById('verTag');
+ if(vt)vt.textContent='Atualizado em '+APP_DATE+' · v'+APP_VER;
+ var lv=parseInt(localStorage.getItem('guimas_consolidado_ver')||'0',10);
+ if(lv&&lv<APP_VER)setTimeout(function(){toast('✅ App atualizado')},900);
+ localStorage.setItem('guimas_consolidado_ver',String(APP_VER));
+}catch(e){}
+startSync();
+try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
+</script>
+</body>
+</html>
