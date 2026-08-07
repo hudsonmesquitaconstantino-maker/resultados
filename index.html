@@ -48,6 +48,8 @@ main{padding:12px}
 .catpick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .catpick button{flex:1;min-width:74px;font:inherit;font-size:12px;font-weight:800;padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:#F6F8FA;color:var(--muted);cursor:pointer;line-height:1.3}
 .catpick button.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+.varq{font-size:11px;font-weight:800;letter-spacing:.2px}
+.varq.down{color:var(--red)} .varq.up{color:var(--green)}
 .mv{border:none;background:#EEF2F6;color:var(--muted);font-size:12px;font-weight:800;border-radius:8px;padding:3px 7px;margin-left:6px;cursor:pointer}
 .slider{width:100%;margin:10px 0 4px}
 .dayrow{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;color:var(--muted)}
@@ -195,7 +197,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=13; var APP_DATE='04/08/2026';
+var APP_VER=14; var APP_DATE='04/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -435,11 +437,32 @@ function toggleMeu(placa){
  toast(i>=0?'Movido para a frota Fábio':'Movido para a frota Hudson');
 }
 function semFipe(){ return carrosFabio().filter(function(c){return !(c.valorRef>0)}) }
+function snap(){ return (state.fipeSnap&&typeof state.fipeSnap==='object')?state.fipeSnap:{} }
+function registrarFipe(){
+ /* guarda o valor da tabela anterior de cada carro, para calcular a variação */
+ var s=snap(), mudou=false;
+ todosCarros().forEach(function(c){
+  var p=norPlaca(c.placa), v=Math.round((c.valorRef||0)*100), m=String(c.fipeMes||'');
+  if(!p||!v) return;
+  var r=s[p];
+  if(!r){ s[p]={mes:m,v:v,antMes:'',antV:0}; mudou=true; return }
+  if(m&&r.mes&&m!==r.mes&&v!==r.v){ s[p]={mes:m,v:v,antMes:r.mes,antV:r.v}; mudou=true }
+  else if(v!==r.v&&!m){ s[p]={mes:m,v:v,antMes:r.mes,antV:r.v}; mudou=true }
+ });
+ if(mudou){ state.fipeSnap=s; save() }
+}
+function variacao(c){
+ var r=snap()[norPlaca(c.placa)];
+ if(!r||!r.antV) return null;
+ var atual=Math.round((c.valorRef||0)*100);
+ if(!atual) return null;
+ return {pct:((atual-r.antV)/r.antV)*100, dif:atual-r.antV, de:r.antMes};
+}
 function totalCarros(){
  var t=0; carrosFabio().forEach(function(c){ t+=Math.round((c.valorRef||0)*100) });
  return t;
 }
-function totalBens(){ var t=0; toArr(state.bens).forEach(function(b){t+=(b.v||0)}); return t }
+function totalBens(){ var t=0; bens().forEach(function(b){t+=(b.v||0)}); return t }
 function patrimonio(){ return totalBens()+totalCarros() }
 
 /* ---------- marco inicial: o app começa a contar quando é usado pela 1ª vez ---------- */
@@ -452,10 +475,10 @@ var MESES_PLANILHA=[
  {mes:'JUNHO/2026',ganho:9335186,desp:0},
  {mes:'JULHO/2026',ganho:0,desp:0}
 ];
-function manuais(){ return toArr(state.manuais) }
+function manuais(){ return toArr(state.manuais).filter(function(m){return m&&!m.del}) }
 function garantirManuais(){
  if(state.semeado) return;                    /* semeia uma única vez na vida do app */
- if(!manuais().length) state.manuais=MESES_PLANILHA.slice();
+ if(!manuais().length) state.manuais=MESES_PLANILHA.map(function(m){var c={};for(var k in m)c[k]=m[k];c.id=c.id||uid();c.at=agora();return c});
  state.semeado=true; save();
 }
 function garantirInicio(){
@@ -647,13 +670,13 @@ function viewPatr(){
  var h='<div class="card"><h2>PATRIMÔNIO TOTAL</h2><div class="big">'+fmt(tp)+'</div>'
   +'<div class="sub">Bens cadastrados '+fmt(tb)+' · Carros pela FIPE '+fmt(tc)+'</div></div>';
  h+='<div class="card"><h2>BENS <span class="chip">editável</span></h2>';
- toArr(state.bens).forEach(function(b){
+ bens().forEach(function(b){
   h+='<div class="item">'
    +'<input class="nm" value="'+esc(b.nome)+'" placeholder="descrição" oninput="setBemNome(\''+b.id+'\',this.value)">'
    +'<input class="vl" value="'+(b.v?fmt(b.v):'')+'" placeholder="R$0,00" onfocus="this.value=rawBem(\''+b.id+'\')" oninput="setBemVal(\''+b.id+'\',this.value)" onblur="blurBem(\''+b.id+'\',this)">'
    +'<button class="del" onclick="delBem(\''+b.id+'\')">×</button></div>';
  });
- if(!toArr(state.bens).length) h+='<div class="empty">Nenhum bem cadastrado.<br>Ex.: casa em Itaipuaçu, casa em São Gonçalo.</div>';
+ if(!bens().length) h+='<div class="empty">Nenhum bem cadastrado.<br>Ex.: casa em Itaipuaçu, casa em São Gonçalo.</div>';
  h+='<button class="addLine" onclick="openBem()">+ Adicionar bem</button></div>';
  h+='<div class="card"><h2>FROTA FÁBIO <span class="chip g">FIPE automática</span></h2>';
  var sf=semFipe();
@@ -662,11 +685,23 @@ function viewPatr(){
  else if(!carros.length) h+='<div class="empty">Nenhum carro nas frotas selecionadas.</div>';
  else{
   carros.forEach(function(c){
-   h+='<div class="lin"><span class="n">'+esc(c.placa||'')+' · '+esc(c.nome||c.modeloCRLV||'')+'</span>'
+   var vr=variacao(c);
+   h+='<div class="lin"><span class="n">'+esc(c.placa||'')+' · '+esc(c.nome||c.modeloCRLV||'')
+     +(vr?'<br><span class="varq '+(vr.pct<0?'down':'up')+'">'+(vr.pct<0?'▼':'▲')+' '+Math.abs(vr.pct).toFixed(1).replace('.',',')+'% ('+fmt(Math.abs(vr.dif))+') vs '+esc(vr.de)+'</span>':'')
+     +'</span>'
      +'<span class="v">'+fmt(Math.round((c.valorRef||0)*100))
      +' <button class="mv" onclick="toggleMeu(\''+esc(c.placa)+'\')" title="Mover para a frota Hudson">↔</button></span></div>';
   });
+  var somaAnt=0, comVar=0;
+  carros.forEach(function(c){ var r=snap()[norPlaca(c.placa)]; if(r&&r.antV){ somaAnt+=r.antV; comVar++ } });
   h+='<div class="tot"><span>'+carros.length+' carro'+(carros.length>1?'s':'')+'</span><span class="v">'+fmt(tc)+'</span></div>';
+  if(comVar){
+   var difT=0; carros.forEach(function(c){ var v=variacao(c); if(v) difT+=v.dif });
+   var pctT=somaAnt?((difT/somaAnt)*100):0;
+   h+='<div class="sub">Desde a tabela anterior: <span class="varq '+(difT<0?'down':'up')+'">'+(difT<0?'▼':'▲')+' '+Math.abs(pctT).toFixed(1).replace('.',',')+'% ('+fmt(Math.abs(difT))+')</span> em '+comVar+' carro'+(comVar>1?'s':'')+'.</div>';
+  }else{
+   h+='<div class="sub">A variação por carro aparece assim que a FIPE for atualizada no Gestão (comparo com a tabela anterior).</div>';
+  }
  }
  h+='</div>';
  var meus=meusCarros();
@@ -704,11 +739,11 @@ function salvarMes(){
  var p=mes.split('/');
  if(MESES.indexOf(p[0])<0||isNaN(parseInt(p[1],10))){toast('⚠️ Escreva assim: ABRIL/2026');return}
  var lista=manuais().slice();
- if(MS_ID){ lista.forEach(function(x){ if(x.id===MS_ID){x.mes=mes;x.ganho=g;x.desp=d} }) }
+ if(MS_ID){ lista.forEach(function(x){ if(x.id===MS_ID){x.mes=mes;x.ganho=g;x.desp=d;x.at=agora()} }) }
  else{
   var ja=null; lista.forEach(function(x){ if(String(x.mes).toUpperCase()===mes) ja=x });
-  if(ja){ ja.ganho=g; ja.desp=d; toast('Mês já existia — atualizado ✓') }
-  else lista.push({id:uid(),mes:mes,ganho:g,desp:d});
+  if(ja){ ja.ganho=g; ja.desp=d; ja.at=agora(); toast('Mês já existia — atualizado ✓') }
+  else lista.push({id:uid(),mes:mes,ganho:g,desp:d,at:agora()});
  }
  state.manuais=lista; save();
  document.getElementById('ovMes').classList.remove('open'); render(); toast('Mês salvo ✓');
@@ -716,7 +751,7 @@ function salvarMes(){
 function delMes(){
  if(!MS_ID)return;
  ask('Excluir mês','Remover esse mês lançado à mão do histórico?','Excluir',function(){
-  state.manuais=manuais().filter(function(x){return x.id!==MS_ID});
+  toArr(state.manuais).forEach(function(x){ if(x.id===MS_ID){x.del=true;x.at=agora()} });
   save(); document.getElementById('ovMes').classList.remove('open'); render(); toast('Mês removido');
  });
 }
@@ -736,24 +771,25 @@ function usarMediaAuto(){
  document.getElementById('ovMedia').classList.remove('open'); render(); toast('Usando a média automática');
 }
 /* ---------- bens (única coisa que este app grava) ---------- */
+function bens(){return toArr(state.bens).filter(function(b){return b&&!b.del})}
 function findBem(id){return toArr(state.bens).filter(function(b){return b.id===id})[0]}
 function rawBem(id){var b=findBem(id);return b?rawVal(b.v):''}
 function blurBem(id,el){var b=findBem(id);if(b)el.value=b.v?fmt(b.v):''}
-function setBemNome(id,v){var b=findBem(id);if(!b)return;b.nome=v;save()}
-function setBemVal(id,v){var b=findBem(id);if(!b)return;b.v=parseVal(v);save();
+function setBemNome(id,v){var b=findBem(id);if(!b)return;b.nome=v;b.at=agora();save()}
+function setBemVal(id,v){var b=findBem(id);if(!b)return;b.v=parseVal(v);b.at=agora();save();
  try{var t=document.querySelector('.big');if(t)t.textContent=fmt(patrimonio())}catch(e){}}
 function openBem(){BM_ID=null;document.getElementById('bmNome').value='';document.getElementById('bmVal').value='';document.getElementById('ovBem').classList.add('open')}
 function saveBem(){
  var n=(document.getElementById('bmNome').value||'').trim();
  var v=parseVal(document.getElementById('bmVal').value);
  if(!n){toast('⚠️ Escreva a descrição');return}
- state.bens=toArr(state.bens); state.bens.push({id:uid(),nome:n,v:v});
+ state.bens=toArr(state.bens); state.bens.push({id:uid(),nome:n,v:v,at:agora()});
  save(); document.getElementById('ovBem').classList.remove('open'); render(); toast('Bem adicionado ✓');
 }
 function delBem(id){
  var b=findBem(id); if(!b)return;
  ask('Excluir bem',(b.nome||'')+' — '+fmt(b.v),'Excluir',function(){
-  state.bens=toArr(state.bens).filter(function(x){return x.id!==id});
+  toArr(state.bens).forEach(function(x){ if(x.id===id){x.del=true;x.at=agora()} });
   save();render();toast('Bem excluído');
  });
 }
@@ -776,11 +812,31 @@ var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,g
 function touch(){state.rev=Date.now();state.dev=DEV}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
 function save(){touch();persist();schedulePush()}
+function agora(){return Date.now()}
+function mesclarLista(rem,loc){
+ /* junta as duas listas por id; para o mesmo id vence quem foi alterado por último.
+    Item apagado vira lápide (del) e também respeita o horário — assim nada "ressuscita"
+    nem some quando os dois aparelhos mexem quase juntos. */
+ var mapa={};
+ function por(lista){
+  toArr(lista).forEach(function(it){
+   if(!it) return;
+   var k=it.id||('k:'+String(it.mes||it.nome||'').toUpperCase());   /* aguenta item sem id */
+   var at=it.at||0, ja=mapa[k];
+   if(!ja||at>=(ja.at||0)) mapa[k]=it;
+  });
+ }
+ por(loc); por(rem);
+ return Object.keys(mapa).map(function(k){return mapa[k]});
+}
 function mesclar(remoto,local){
- /* o que o aparelho remoto não enviou (por ser versão antiga) é preservado do local */
  var o={};
  for(var k in remoto) if(Object.prototype.hasOwnProperty.call(remoto,k)) o[k]=remoto[k];
- ['manuais','bens','meus','media','inicio','semeado'].forEach(function(k){
+ /* listas: mescladas item a item */
+ o.bens=mesclarLista(remoto.bens,local.bens);
+ o.manuais=mesclarLista(remoto.manuais,local.manuais);
+ /* campos simples: o que o remoto não enviou fica com o valor local */
+ ['meus','media','inicio','semeado','fipeSnap'].forEach(function(k){
   var vazioRemoto=(remoto[k]===undefined||remoto[k]===null);
   var temLocal=(local[k]!==undefined&&local[k]!==null&&!(Array.isArray(local[k])&&!local[k].length));
   if(vazioRemoto&&temLocal) o[k]=local[k];
@@ -789,9 +845,9 @@ function mesclar(remoto,local){
 }
 function norm(s){
  if(!s||typeof s!=='object')s={};
- var o={rev:s.rev||0,dev:s.dev||'',bens:[],meus:(s.meus===undefined?MEUS_PADRAO.slice():toArr(s.meus).map(function(p){return norPlaca(p)})),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),manuais:(s.manuais===undefined?null:toArr(s.manuais)),semeado:!!s.semeado};
+ var o={rev:s.rev||0,dev:s.dev||'',bens:[],meus:(s.meus===undefined?MEUS_PADRAO.slice():toArr(s.meus).map(function(p){return norPlaca(p)})),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),fipeSnap:(s.fipeSnap||null),manuais:(s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,del:!!m.del}})),semeado:!!s.semeado};
  if(s.zero&&typeof s.zero==='object') o.zero={at:s.zero.at||0,sem:toArr(s.zero.sem),desp:toArr(s.zero.desp)};
- toArr(s.bens).forEach(function(b){ if(b) o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0)}) });
+ toArr(s.bens).forEach(function(b){ if(b) o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0),at:b.at||0,del:!!b.del}) });
  return o;
 }
 function load(){try{var r=localStorage.getItem(KEY);if(r)return norm(JSON.parse(r))}catch(e){}return norm({})}
@@ -831,7 +887,7 @@ function startSync(){
   /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
   db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;render()},function(){});
   db.ref('familias/'+h+'/despesas').on('value',function(s){DESP=s.val()||null;render()},function(){});
-  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;render()},function(){});
+  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;try{registrarFipe()}catch(e){};render()},function(){});
   db.ref('.info/connected').on('value',function(s){
    SYNC.online=!!s.val();
    setPill(SYNC.online?'on':'wait',SYNC.online?'🟢 sincronizado':'🟡 offline');
