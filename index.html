@@ -197,7 +197,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=14; var APP_DATE='04/08/2026';
+var APP_VER=15; var APP_DATE='11/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -346,8 +346,10 @@ function contasAte(dia){
 }
 /* média do que entra por semana — calculada das últimas semanas fechadas */
 function semanasDaMedia(){
+ /* a média só serve para PREVER as semanas que ainda não aconteceram — não entra em
+    conta nenhuma do saldo. Por isso usa as 4 últimas fechadas, sem o corte do marco. */
  if(!SEM) return [];
- return toArr(SEM.history).filter(function(w){return w&&w.paid>0&&semanaDepoisDoInicio(w)}).slice(0,4);
+ return toArr(SEM.history).filter(function(w){return w&&w.paid>0}).slice(0,4);
 }
 function mediaSemanalAuto(){
  var hs=semanasDaMedia();
@@ -492,6 +494,10 @@ function dataInicio(){
  return new Date(i.y,i.m-1,i.d);
 }
 function mesInicioLabel(){ var i=state.inicio; return i?MESES[i.m-1]+'/'+i.y:'—' }
+/* o marco vale por MÊS, não por dia: uma semana que tem dias no mês de referência
+   conta inteira nesse mês, mesmo que tenha fechado antes de o app ser instalado.
+   Cortar por dia fazia a semana já fechada sumir do saldo do mês. */
+function mesInicioDate(){ var i=state.inicio; if(!i) return new Date(1970,0,1); return new Date(i.y,i.m-1,1) }
 function mesDepoisDoInicio(label){
  var i=state.inicio; if(!i) return true;
  var p=String(label||'').toUpperCase().split('/');
@@ -501,8 +507,7 @@ function mesDepoisDoInicio(label){
 }
 function semanaDepoisDoInicio(w){
  var p=periodoSemana(w); if(!p) return false;
- return p.fim>=dataInicio()||(p.fim.getFullYear()===dataInicio().getFullYear()
-   &&p.fim.getMonth()===dataInicio().getMonth()&&p.fim.getDate()>=dataInicio().getDate());
+ return p.fim>=mesInicioDate();
 }
 
 /* ---------- RENDER ---------- */
