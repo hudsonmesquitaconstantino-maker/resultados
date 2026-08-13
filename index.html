@@ -197,7 +197,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=15; var APP_DATE='11/08/2026';
+var APP_VER=16; var APP_DATE='11/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -311,14 +311,23 @@ function fracaoAberta(){
  return diasNoMesRef(p.ini,p.fim)/p.dias;
 }
 /* ---------- leitura das DESPESAS ---------- */
+/* o app de Despesas não apaga de verdade: marca lápide (del:true) para a exclusão
+   viajar entre os aparelhos. Quem lê tem de ignorar essas linhas, senão uma conta
+   já excluída continua pesando aqui e o total não bate com o app de Despesas. */
+function despItens(){
+ if(!DESP) return [];
+ return toArr(DESP.items).filter(function(i){return i&&!i.del});
+}
 function despPagoAtual(){
- if(!DESP) return 0;
- var t=0; toArr(DESP.items).forEach(function(i){ if(i&&i.s==='paid') t+=(i.v||0) });
+ var t=0; despItens().forEach(function(i){ if(i.s==='paid') t+=(i.v||0) });
+ return t;
+}
+function despTotalAtual(){
+ var t=0; despItens().forEach(function(i){ t+=(i.v||0) });
  return t;
 }
 function despPendentes(){
- if(!DESP) return [];
- return toArr(DESP.items).filter(function(i){return i&&i.s!=='paid'});
+ return despItens().filter(function(i){return i.s!=='paid'});
 }
 function despFechadosNovos(){ /* nada do histórico entra: o mês corrente é o das Despesas em aberto */
  return [];
@@ -805,7 +814,7 @@ function openFontes(){
    +(extra?'<div class="sub" style="margin:-4px 0 6px">'+extra+'</div>':'');
  }
  f+=linha('Semanal (ganhos)',SEM,SEM?(toArr(SEM.drivers).length+' motoristas · '+toArr(SEM.history).length+' semanas fechadas'):'');
- f+=linha('Despesas (contas)',DESP,DESP?(toArr(DESP.items).length+' despesas · '+toArr(DESP.history).length+' meses fechados'):'');
+ f+=linha('Despesas (contas)',DESP,DESP?(despItens().length+' despesas · '+toArr(DESP.history).length+' meses fechados'):'');
  f+=linha('Gestão (frota/FIPE)',GEST,GEST?(carrosFabio().length+' carros do Fábio'):'');
  document.getElementById('fontesInfo').innerHTML=f;
  document.getElementById('ovFontes').classList.add('open');
