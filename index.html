@@ -197,12 +197,12 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=17; var APP_DATE='12/08/2026';
+var APP_VER=18; var APP_DATE='13/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
 var MEUS_PADRAO=['LQZ6C72','OYZ9079','QUB5B64','RJZ1B66'];
-var state={rev:0,dev:'',bens:[],meus:MEUS_PADRAO.slice(),media:null,inicio:null,manuais:null,semeado:false};
+var state={rev:0,dev:'',bens:[],meus:MEUS_PADRAO.slice(),media:null,inicio:null,manuais:null,migs:[],semeado:false};
 /* espelhos SOMENTE LEITURA dos outros apps */
 var SEM=null, DESP=null, GEST=null;
 
@@ -487,6 +487,34 @@ var MESES_PLANILHA=[
  {mes:'JULHO/2026',ganho:0,desp:0}
 ];
 function manuais(){ return toArr(state.manuais).filter(function(m){return m&&!m.del}) }
+
+/* Despesas de JANEIRO a JULHO/2026, tiradas da planilha Receita x Despesas do Fábio.
+   ABRIL, MAIO, JUNHO e JULHO tinham ficado com despesa zero na semeadura;
+   isto preenche só esse campo e não encosta nos ganhos, que já estavam certos. */
+var DESP_PLANILHA=[
+ {mes:'JANEIRO/2026',desp:8607275},
+ {mes:'FEVEREIRO/2026',desp:5783637},
+ {mes:'MARÇO/2026',desp:8096825},
+ {mes:'ABRIL/2026',desp:6050450},
+ {mes:'MAIO/2026',desp:6017817},
+ {mes:'JUNHO/2026',desp:6617272},
+ {mes:'JULHO/2026',desp:20419795}
+];
+function migrarDespesasPlanilha(){
+ state.migs=toArr(state.migs);
+ if(state.migs.indexOf('planilha-desp')>=0) return 0;
+ var n=0;
+ DESP_PLANILHA.forEach(function(d){
+  manuais().forEach(function(m){
+   if(String(m.mes||'').trim().toUpperCase()!==d.mes) return;
+   if((m.desp||0)===d.desp) return;
+   m.desp=d.desp; m.at=agora(); n++;
+  });
+ });
+ state.migs.push('planilha-desp');
+ touch(); persist(); schedulePush();
+ return n;
+}
 function garantirManuais(){
  if(state.semeado) return;                    /* semeia uma única vez na vida do app */
  if(!manuais().length) state.manuais=MESES_PLANILHA.map(function(m){var c={};for(var k in m)c[k]=m[k];c.id=c.id||uid();c.at=agora();return c});
@@ -871,6 +899,7 @@ function mesclar(remoto,local){
  /* listas: mescladas item a item */
  o.bens=mesclarLista(remoto.bens,local.bens);
  o.manuais=mesclarLista(remoto.manuais,local.manuais);
+ ['migs'].forEach(function(k){if((remoto[k]===undefined||remoto[k]===null)&&local[k])o[k]=local[k]});
  /* campos simples: o que o remoto não enviou fica com o valor local */
  ['meus','media','inicio','semeado','fipeSnap'].forEach(function(k){
   var vazioRemoto=(remoto[k]===undefined||remoto[k]===null);
@@ -881,7 +910,8 @@ function mesclar(remoto,local){
 }
 function norm(s){
  if(!s||typeof s!=='object')s={};
- var o={rev:s.rev||0,dev:s.dev||'',bens:[],meus:(s.meus===undefined?MEUS_PADRAO.slice():toArr(s.meus).map(function(p){return norPlaca(p)})),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),fipeSnap:(s.fipeSnap||null),manuais:(s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,del:!!m.del}})),semeado:!!s.semeado};
+ var o={rev:s.rev||0,dev:s.dev||'',bens:[],meus:(s.meus===undefined?MEUS_PADRAO.slice():toArr(s.meus).map(function(p){return norPlaca(p)})),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),fipeSnap:(s.fipeSnap||null),manuais:(s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,del:!!m.del}})),migs:[],semeado:!!s.semeado};
+ toArr(s.migs).forEach(function(m){if(m&&o.migs.indexOf(m)<0)o.migs.push(m)});
  if(s.zero&&typeof s.zero==='object') o.zero={at:s.zero.at||0,sem:toArr(s.zero.sem),desp:toArr(s.zero.desp)};
  toArr(s.bens).forEach(function(b){ if(b) o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0),at:b.at||0,del:!!b.del}) });
  return o;
@@ -983,6 +1013,7 @@ setInterval(checkUpdate,15*60*1000);
 state=load();
 garantirInicio();
 garantirManuais();
+var _migDesp=migrarDespesasPlanilha();
 setTab('saldo');
 try{
  var vt=document.getElementById('verTag');
