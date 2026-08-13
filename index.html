@@ -197,7 +197,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=16; var APP_DATE='11/08/2026';
+var APP_VER=17; var APP_DATE='12/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -622,10 +622,10 @@ function viewMes(){
    +'<div class="lin"><span class="n">Ganhos ('+meses.length+' mes'+(meses.length>1?'es':'')+')</span><span class="v g">'+fmt(tg)+'</span></div>'
    +'<div class="lin"><span class="n">Despesas</span><span class="v r">'+fmt(td)+'</span></div>'
    +'<div class="tot"><span>Resultado acumulado</span><span class="v '+((tg-td)<0?'r':'g')+'">'+fmt(tg-td)+'</span></div></div>';
-  h+='<div class="card"><h2>MESES FECHADOS</h2>';
+  h+='<div class="card"><h2>MÊS A MÊS</h2>';
   meses.forEach(function(m){
    var r=m.ganho-m.desp;
-   h+='<div class="lin"><span class="n">'+esc(m.mes)+(m.manual?' <span class="chip">lançado à mão</span>':'')+'</span>'
+   h+='<div class="lin"><span class="n">'+esc(m.mes)+(m.andamento?' <span class="chip">em andamento</span>':'')+(m.manual?' <span class="chip">lançado à mão</span>':'')+'</span>'
     +'<span class="v '+(r<0?'r':'g')+'">'+fmt(r)
     +(m.manual?' <button class="mv" onclick="openMes(\''+m.mid+'\')">editar</button>':'')+'</span></div>'
     +'<div class="sub" style="margin:-4px 0 6px">Ganhos '+fmt(m.ganho)+' · Despesas '+fmt(m.desp)+(m.semanas?' · '+m.semanas+' semana'+(m.semanas>1?'s':''):'')+'</div>';
@@ -670,6 +670,28 @@ function montaMeses(){
   mapa[k].ganho+=(m.ganho||0); mapa[k].desp+=(m.desp||0); mapa[k].manual=true; mapa[k].mid=m.id;
   if(auto.indexOf(k)<0) auto.push(k);
  });
+ /* o mês corrente ainda não fechou: sem isso ele entrava no acumulado só com a
+    fatia das semanas já fechadas e com despesa zero, ficando sempre atrasado.
+    Aqui ele passa a valer o que o Saldo mostra agora — semana aberta e contas
+    já pagas incluídas. Quando o mês fechar de verdade, o histórico assume. */
+ var kr=mesRef().label;
+ if(mesDepoisDoInicio(kr)){
+  if(!mapa[kr]) mapa[kr]={mes:kr,ganho:0,desp:0,semanas:0};
+  var jaFechado=false;
+  if(DESP) toArr(DESP.history).forEach(function(m){
+   if(String((m&&m.month)||'').toUpperCase()===kr) jaFechado=true;
+  });
+  if(!jaFechado){
+   var extraM=0, extraD=0;
+   manuais().forEach(function(m){
+    if(m&&String(m.mes||'').toUpperCase()===kr){extraM+=(m.ganho||0);extraD+=(m.desp||0)}
+   });
+   mapa[kr].ganho=entradas()+extraM;
+   mapa[kr].desp=saidas()+extraD;
+   mapa[kr].andamento=true;
+  }
+  if(auto.indexOf(kr)<0) auto.push(kr);
+ }
  var arr=auto.map(function(k){return mapa[k]});
  arr.sort(function(a,b){
   var pa=a.mes.split('/'), pb=b.mes.split('/');
