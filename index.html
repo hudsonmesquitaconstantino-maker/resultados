@@ -197,7 +197,7 @@ textarea.field{min-height:96px;font-family:var(--mono);font-size:12px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=18; var APP_DATE='13/08/2026';
+var APP_VER=19; var APP_DATE='14/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -477,14 +477,19 @@ function totalBens(){ var t=0; bens().forEach(function(b){t+=(b.v||0)}); return 
 function patrimonio(){ return totalBens()+totalCarros() }
 
 /* ---------- marco inicial: o app começa a contar quando é usado pela 1ª vez ---------- */
+/* Valores da planilha Receita x Despesas do Fábio. Precisam ser os VERDADEIROS:
+   se um aparelho tiver de semear de novo, ele semeia o certo. Antes JULHO vinha
+   com ganho 0 aqui, e era isso que apagava o valor lançado à mão toda vez que a
+   semente rodava. Os ids são fixos para a semente casar com o que já existe na
+   nuvem em vez de criar um mês paralelo. */
 var MESES_PLANILHA=[
- {mes:'JANEIRO/2026',ganho:11286257,desp:8607275},
- {mes:'FEVEREIRO/2026',ganho:8939734,desp:5783637},
- {mes:'MARÇO/2026',ganho:9168035,desp:8096825},
- {mes:'ABRIL/2026',ganho:10043985,desp:0},
- {mes:'MAIO/2026',ganho:10772485,desp:0},
- {mes:'JUNHO/2026',ganho:9335186,desp:0},
- {mes:'JULHO/2026',ganho:0,desp:0}
+ {id:'pl-2026-01',mes:'JANEIRO/2026',ganho:11286257,desp:8607275},
+ {id:'pl-2026-02',mes:'FEVEREIRO/2026',ganho:8939734,desp:5783637},
+ {id:'pl-2026-03',mes:'MARÇO/2026',ganho:9168035,desp:8096825},
+ {id:'pl-2026-04',mes:'ABRIL/2026',ganho:10043985,desp:6050450},
+ {id:'pl-2026-05',mes:'MAIO/2026',ganho:10772485,desp:6017817},
+ {id:'pl-2026-06',mes:'JUNHO/2026',ganho:9335186,desp:6617272},
+ {id:'pl-2026-07',mes:'JULHO/2026',ganho:9426879,desp:20419795}
 ];
 function manuais(){ return toArr(state.manuais).filter(function(m){return m&&!m.del}) }
 
@@ -512,19 +517,45 @@ function migrarDespesasPlanilha(){
   });
  });
  state.migs.push('planilha-desp');
- touch(); persist(); schedulePush();
+ persist();
+ if(SYNC.gotRemote||!SYNC.temSync){ touch(); schedulePush() }
+ return n;
+}
+
+/* Conserta o estrago já feito: se JULHO ficou com ganho zerado por causa da
+   semente antiga, devolve o valor lançado à mão. Roda uma vez só. */
+function repararJulho(){
+ state.migs=toArr(state.migs);
+ if(state.migs.indexOf('rep-julho-2026')>=0) return false;
+ var achou=false;
+ manuais().forEach(function(m){
+  if(String(m.mes||'').trim().toUpperCase()!=='JULHO/2026') return;
+  if((m.ganho||0)===0){ m.ganho=9426879; m.at=agora(); achou=true }
+ });
+ state.migs.push('rep-julho-2026');
+ persist();
+ if(SYNC.gotRemote||!SYNC.temSync){ touch(); schedulePush() }
+ return achou;
+}
+function aplicarCorrecoes(){
+ var n=migrarDespesasPlanilha();
+ var j=repararJulho();
+ if(j) setTimeout(function(){toast('✅ Julho restaurado')},1200);
  return n;
 }
 function garantirManuais(){
  if(state.semeado) return;                    /* semeia uma única vez na vida do app */
- if(!manuais().length) state.manuais=MESES_PLANILHA.map(function(m){var c={};for(var k in m)c[k]=m[k];c.id=c.id||uid();c.at=agora();return c});
- state.semeado=true; save();
+ if(!manuais().length) state.manuais=MESES_PLANILHA.map(function(m){
+  var c={};for(var k in m)c[k]=m[k];c.id=c.id||uid();c.at=1;return c;   /* at=1: perde de qualquer edição de verdade */
+ });
+ state.semeado=true;
+ persist();                                   /* grava local, mas NÃO carimba rev nem empurra */
 }
 function garantirInicio(){
  if(state.inicio) return;
  var d=new Date();
  state.inicio={y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()};
- save();
+ persist();                                   /* idem: sem carimbar rev */
 }
 function dataInicio(){
  var i=state.inicio; if(!i) return new Date(1970,0,1);
@@ -945,10 +976,15 @@ function startSync(){
    var v=s.val();
    SYNC.gotRemote=true;
    if(!v){push();return}
-   if(v.dev===DEV||(v.rev||0)<=(state.rev||0)){ if(SYNC.pendingPush)push(); return }
-   state=norm(v);persist();render();
+   /* rev 0 = este aparelho ainda não teve edição nenhuma (acabou de semear).
+      Nesse caso a nuvem manda, sempre — senão a semente sobrescreve os dados bons. */
+   var soSemente=!(state.rev>0);
+   if(!soSemente&&(v.dev===DEV||(v.rev||0)<=(state.rev||0))){ if(SYNC.pendingPush)push(); return }
+   state=norm(v);persist();
+   aplicarCorrecoes();
+   render();
    if(SYNC.pendingPush)push();
-   toast('🔄 Atualizado pelo outro aparelho');
+   if(!soSemente)toast('🔄 Atualizado pelo outro aparelho');
   },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
   /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
   db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;render()},function(){});
@@ -1013,7 +1049,7 @@ setInterval(checkUpdate,15*60*1000);
 state=load();
 garantirInicio();
 garantirManuais();
-var _migDesp=migrarDespesasPlanilha();
+var _migDesp=aplicarCorrecoes();
 setTab('saldo');
 try{
  var vt=document.getElementById('verTag');
