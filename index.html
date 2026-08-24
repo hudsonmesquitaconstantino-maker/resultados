@@ -107,13 +107,35 @@ main{padding:14px 14px 4px;max-width:720px;margin:0 auto}
 #view>.hero,#view>.card,#view>.sectionCard,#view>.detailsCard,#view>.sourceWarning{animation:cardIn .22s ease both}
 @media(max-width:390px){header{padding-left:12px;padding-right:12px}.htitle{font-size:24px}.syncpill{padding:0 9px}.heroValue{font-size:31px}.heroStats,.monthGrid{gap:5px}.heroStat,.metric{padding:8px 7px}.heroStat .v,.metric .v{font-size:12px}main{padding-left:10px;padding-right:10px}.card,.sectionCard{padding:13px}.hero{padding:15px}.financeRow,.lin{font-size:12px}.vehicleValue{font-size:12px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ===== v21 · refinamento executivo compacto ===== */
+header{padding:calc(7px + env(safe-area-inset-top)) 14px 8px}
+.hrow{align-items:center;gap:9px}.eyebrow{font-size:8.5px;letter-spacing:1.55px;margin:0 0 2px}.htitle{font-size:23px;letter-spacing:-.75px}
+.hactions{gap:6px}.syncpill{height:34px;border-radius:11px;padding:0 10px;font-size:10px}.menubtn{width:34px;height:34px;border-radius:11px;font-size:16px}
+#verTag{font-size:9px;margin:3px 0 7px}.tabs{padding:2px;border-radius:11px}.tabs button{padding:7px 4px;border-radius:9px;font-size:11px}
+main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard{border-radius:17px;margin-bottom:9px;box-shadow:0 6px 18px rgba(25,36,53,.045)}
+.hero{padding:14px 15px 13px}.hero:before{width:3px}.heroHead{margin-bottom:6px}.heroLabel,.sectionTitle{font-size:9.5px;letter-spacing:1.05px}.heroValue,.heroValue.big{font-size:30px;letter-spacing:-1.05px}.heroMeta{font-size:11px;line-height:1.38;margin-top:5px}
+.heroStats{gap:6px;margin-top:10px}.heroStat{border-radius:11px;padding:8px}.heroStat .k{font-size:8px}.heroStat .v{font-size:12px;overflow:visible;text-overflow:clip}
+.card,.sectionCard{padding:13px 14px}.card h2,.sectionHead{font-size:9.5px;letter-spacing:.95px;margin-bottom:8px}.sectionIntro,.sub{font-size:11px;line-height:1.42}
+.forecast{background:linear-gradient(145deg,#17233A,#21324B)}.forecast .heroValue{font-size:29px}.forecast .heroStats{margin-top:9px}.forecast .heroMeta .mv{vertical-align:1px}
+.detailsCard summary{padding:11px 14px;font-size:11px}.detailsBody{padding:6px 14px 11px}
+.cashList{gap:5px;margin-top:6px}.cashPoint{grid-template-columns:30px minmax(0,1fr) auto;gap:8px;padding:8px 9px;border-radius:11px}.cashPoint .day{width:30px;height:30px;border-radius:9px;font-size:10px}.cashPoint .desc{font-size:10px}.cashPoint .desc b{font-size:11px}.cashPoint .amt{font-size:12px}.alertBox{margin-top:7px;padding:8px 9px;font-size:10px}
+.monthGrid{gap:6px;margin-top:9px}.metric{border-radius:11px;padding:8px}.metric .k{font-size:8px}.metric .v{font-size:clamp(10.5px,3vw,13px);white-space:nowrap;overflow:visible;text-overflow:clip;letter-spacing:-.35px}
+.patrGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.patrGrid .metric .v{font-size:clamp(13px,3.5vw,15px);white-space:nowrap;overflow:visible;text-overflow:clip}
+.monthEntry{padding:9px 0}.monthName{font-size:12px}.monthResult{font-size:13px}.monthMeta{font-size:10px;line-height:1.38}
+.vehicleRow{gap:8px;padding:9px 0}.vehicleName{font-size:12px}.vehicleValue{font-size:12px}.vehicleActions{margin-top:3px}.mv{font-size:9px;padding:3px 6px;border-radius:7px}
+.item{gap:5px;padding:4px 0}.item input{font-size:12px;border-radius:9px;padding:8px 7px}.item .vl{width:118px;font-size:11.5px}.item .del{width:24px;height:32px}.addLine{margin-top:7px;padding:9px;font-size:11px}.empty{font-size:11px;padding:16px 8px}
+.chip{font-size:8px;padding:3px 6px}.financeRow,.lin{padding:7px 0;font-size:11.5px}.totalRow,.tot{padding-top:9px;font-size:12px}.totalRow .value,.tot .v{font-size:14px}
+.sheet{border-radius:22px 22px 0 0;padding:11px 15px calc(17px + env(safe-area-inset-bottom))}.sheet h3{font-size:19px}.askMsg{font-size:12px}.field,textarea.field{font-size:14px;padding:11px}.menu button{font-size:13px;padding:12px}
+@media(max-width:390px){header{padding-left:11px;padding-right:11px}.htitle{font-size:22px}.syncpill{padding:0 8px}.heroValue,.heroValue.big{font-size:28px}.heroStats,.monthGrid{gap:4px}.heroStat,.metric{padding:7px 6px}.heroStat .v{font-size:11px}.metric .v{font-size:10.5px}main{padding-left:9px;padding-right:9px}.card,.sectionCard{padding:12px}.hero{padding:13px}.patrGrid .metric .v{font-size:13px}}
+
 </style>
 </head>
 <body>
 
 <header>
   <div class="hrow">
-    <div class="brand"><div class="eyebrow">GuimasCar · Inteligência financeira</div><div class="htitle">Resultados</div></div>
+    <div class="brand"><div class="eyebrow">Painel financeiro · Fábio</div><div class="htitle">Resultados</div></div>
     <div class="hactions"><span class="syncpill" id="syncPill" onclick="openSync()">⚪ sem sync</span><button class="menubtn" onclick="openMenu()" aria-label="Menu">☰</button></div>
   </div>
   <div id="verTag"></div>
@@ -198,6 +220,7 @@ main{padding:14px 14px 4px;max-width:720px;margin:0 auto}
   <div class="sheet">
     <button class="close" onclick="document.getElementById('ovBem').classList.remove('open')">✕</button>
     <h3>Novo bem</h3>
+    <div class="askMsg">Cadastre imóveis e outros bens. O item fica salvo e sincronizado entre os aparelhos.</div>
     <div class="lbl">Descrição</div>
     <input class="field" id="bmNome" placeholder="ex.: Casa em Itaipuaçu">
     <div class="lbl">Valor</div>
@@ -224,7 +247,7 @@ main{padding:14px 14px 4px;max-width:720px;margin:0 auto}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=20; var APP_DATE='23/08/2026';
+var APP_VER=21; var APP_DATE='23/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -805,14 +828,13 @@ function montaMeses(){
 }
 function viewPatr(){
  var carros=carrosFabio(), tc=totalCarros(), tb=totalBens(), tp=patrimonio();
- var h='<section class="hero neutral"><div class="heroHead"><span class="heroLabel">Patrimônio do Fábio</span><span class="chip">posição atual</span></div>'
+ var h='<section class="hero neutral"><div class="heroHead"><span class="heroLabel">Patrimônio do Fábio</span><span class="chip">'+carros.length+' carros</span></div>'
   +'<div class="heroValue big">'+fmt(tp)+'</div>'
-  +'<div class="heroMeta">Soma dos bens cadastrados com a frota do Fábio pelos valores FIPE vindos do Gestão.</div>'
-  +'<div class="monthGrid"><div class="metric"><div class="k">Bens</div><div class="v">'+fmt(tb)+'</div></div>'
-   +'<div class="metric"><div class="k">Frota Fábio</div><div class="v">'+fmt(tc)+'</div></div>'
-   +'<div class="metric"><div class="k">Carros</div><div class="v">'+carros.length+'</div></div></div></section>';
+  +'<div class="heroMeta">Bens cadastrados + frota do Fábio pelos valores FIPE vindos do Gestão.</div>'
+  +'<div class="patrGrid"><div class="metric"><div class="k">Bens</div><div class="v">'+fmt(tb)+'</div></div>'
+   +'<div class="metric"><div class="k">Frota Fábio</div><div class="v">'+fmt(tc)+'</div></div></div></section>';
 
- h+='<section class="sectionCard"><div class="sectionHead"><span>Bens</span><span class="chip">editável</span></div>';
+ h+='<section class="sectionCard"><div class="sectionHead"><span>Bens cadastrados</span><span class="chip g">sincronizados</span></div>';
  bens().forEach(function(b){
   h+='<div class="item"><input class="nm" value="'+esc(b.nome)+'" placeholder="descrição" oninput="setBemNome(\''+b.id+'\',this.value)">'
    +'<input class="vl" value="'+(b.v?fmt(b.v):'')+'" placeholder="R$0,00" onfocus="this.value=rawBem(\''+b.id+'\')" oninput="setBemVal(\''+b.id+'\',this.value)" onblur="blurBem(\''+b.id+'\',this)">'
@@ -947,7 +969,10 @@ function openFontes(){
 var DEV=(function(){try{var d=localStorage.getItem('guimas_dev');if(!d){d=uid()+uid();localStorage.setItem('guimas_dev',d)}return d}catch(e){return uid()}})();
 var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,gotRemote:false,temSync:false};
 function touch(){state.rev=Date.now();state.dev=DEV}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+var BENS_GUARD=KEY+'_bens_guard';
+function guardarBens(){try{localStorage.setItem(BENS_GUARD,JSON.stringify(toArr(state&&state.bens)))}catch(e){}}
+function lerBensGuard(){try{return toArr(JSON.parse(localStorage.getItem(BENS_GUARD)||'[]'))}catch(e){return []}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));guardarBens()}catch(e){}}
 function save(){touch();persist();schedulePush()}
 function agora(){return Date.now()}
 function mesclarLista(rem,loc){
@@ -967,17 +992,22 @@ function mesclarLista(rem,loc){
  return Object.keys(mapa).map(function(k){return mapa[k]});
 }
 function mesclar(remoto,local){
+ /* O estado mais novo vence nos campos simples; listas sempre são unidas item a item.
+    Ausência de um item NÃO significa exclusão: exclusão real usa del=true + at. */
+ remoto=remoto&&typeof remoto==='object'?remoto:{};
+ local=local&&typeof local==='object'?local:{};
+ var base=((local.rev||0)>(remoto.rev||0))?local:remoto;
+ var extra=(base===local)?remoto:local;
  var o={};
- for(var k in remoto) if(Object.prototype.hasOwnProperty.call(remoto,k)) o[k]=remoto[k];
- /* listas: mescladas item a item */
+ for(var k in base) if(Object.prototype.hasOwnProperty.call(base,k)) o[k]=base[k];
  o.bens=mesclarLista(remoto.bens,local.bens);
  o.manuais=mesclarLista(remoto.manuais,local.manuais);
- ['migs'].forEach(function(k){if((remoto[k]===undefined||remoto[k]===null)&&local[k])o[k]=local[k]});
- /* campos simples: o que o remoto não enviou fica com o valor local */
- ['meus','media','inicio','semeado','fipeSnap'].forEach(function(k){
-  var vazioRemoto=(remoto[k]===undefined||remoto[k]===null);
-  var temLocal=(local[k]!==undefined&&local[k]!==null&&!(Array.isArray(local[k])&&!local[k].length));
-  if(vazioRemoto&&temLocal) o[k]=local[k];
+ /* migrações são marcadores cumulativos: nunca perder um marcador já executado */
+ var mig=[]; toArr(remoto.migs).concat(toArr(local.migs)).forEach(function(x){if(x&&mig.indexOf(x)<0)mig.push(x)}); o.migs=mig;
+ ['meus','media','inicio','semeado','fipeSnap','zero'].forEach(function(k){
+  var vazio=(o[k]===undefined||o[k]===null||(Array.isArray(o[k])&&!o[k].length));
+  var tem=(extra[k]!==undefined&&extra[k]!==null&&!(Array.isArray(extra[k])&&!extra[k].length));
+  if(vazio&&tem) o[k]=extra[k];
  });
  return o;
 }
@@ -989,7 +1019,13 @@ function norm(s){
  toArr(s.bens).forEach(function(b){ if(b) o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0),at:b.at||0,del:!!b.del}) });
  return o;
 }
-function load(){try{var r=localStorage.getItem(KEY);if(r)return norm(JSON.parse(r))}catch(e){}return norm({})}
+function load(){
+ try{
+  var r=localStorage.getItem(KEY), o=r?norm(JSON.parse(r)):norm({});
+  var g=lerBensGuard(); if(g.length) o.bens=mesclarLista(o.bens,g);
+  return o;
+ }catch(e){return norm({})}
+}
 function syncCfg(){try{return JSON.parse(localStorage.getItem('guimas_consolidado_sync')||'null')}catch(e){return null}}
 function setPill(m,t){var p=document.getElementById('syncPill');p.className='syncpill'+(m?' '+m:'');p.textContent=t}
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
@@ -1018,15 +1054,19 @@ function startSync(){
    var v=s.val();
    SYNC.gotRemote=true;
    if(!v){push();return}
-   /* rev 0 = este aparelho ainda não teve edição nenhuma (acabou de semear).
-      Nesse caso a nuvem manda, sempre — senão a semente sobrescreve os dados bons. */
+   /* rev 0 = aparelho recém-instalado: a nuvem é a base. Depois disso, nunca
+      trocamos o estado inteiro: unimos bens/manuais item a item para um aparelho
+      antigo não apagar uma casa ou outro patrimônio cadastrado no outro. */
    var soSemente=!(state.rev>0);
-   if(!soSemente&&(v.dev===DEV||(v.rev||0)<=(state.rev||0))){ if(SYNC.pendingPush)push(); return }
-   state=norm(v);persist();
+   if(!soSemente&&v.dev===DEV){ if(SYNC.pendingPush)push(); return }
+   var remoto=norm(v), antes=norm(state), juntos=soSemente?remoto:norm(mesclar(remoto,antes));
+   var precisaReenviar=!soSemente&&JSON.stringify(juntos)!==JSON.stringify(remoto);
+   state=juntos;persist();
    aplicarCorrecoes();
    render();
-   if(SYNC.pendingPush)push();
-   if(!soSemente)toast('🔄 Atualizado pelo outro aparelho');
+   if(precisaReenviar){touch();persist();schedulePush()}
+   else if(SYNC.pendingPush)push();
+   if(!soSemente)toast('🔄 Sincronização conferida');
   },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
   /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
   db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;render()},function(){});
@@ -1034,14 +1074,29 @@ function startSync(){
   db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;try{registrarFipe()}catch(e){};render()},function(){});
   db.ref('.info/connected').on('value',function(s){
    SYNC.online=!!s.val();
+   if(!SYNC.online) SYNC.gotRemote=false;
    setPill(SYNC.online?'on':'wait',SYNC.online?'🟢 sincronizado':'🟡 offline');
-   if(SYNC.online&&SYNC.pendingPush)push();
+   if(SYNC.online&&SYNC.pendingPush&&SYNC.gotRemote)push();
   });
  }).catch(function(){setPill('wait','🟡 offline');SYNC.pendingPush=true;setTimeout(startSync,20000)});
 }
 function push(){
- if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;return} /* espera a nuvem responder */
- if(!SYNC.ref){SYNC.pendingPush=true;return}SYNC.pendingPush=false;SYNC.ref.set(state).catch(function(){SYNC.pendingPush=true})}
+ if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;return} /* espera a primeira leitura */
+ if(!SYNC.ref){SYNC.pendingPush=true;return}
+ SYNC.pendingPush=false;
+ var local=norm(state);
+ /* Transação atômica: antes de gravar, une o que existe na nuvem com este aparelho.
+    Assim um iPhone desatualizado não consegue apagar bens/manuais do outro. */
+ SYNC.ref.transaction(function(cur){
+  var junto=cur?norm(mesclar(cur,local)):norm(local);
+  junto.rev=Math.max(Date.now(),local.rev||0,(cur&&cur.rev)||0);
+  junto.dev=DEV;
+  return junto;
+ },function(err,committed,snap){
+  if(err||!committed){SYNC.pendingPush=true;return}
+  if(snap&&snap.val()){state=norm(snap.val());persist();render()}
+ },false);
+}
 function schedulePush(){clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1200)}
 function openSync(){
  var cfg=syncCfg();
