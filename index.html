@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=21; var APP_DATE='23/08/2026';
+var APP_VER=22; var APP_DATE='23/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -258,6 +258,8 @@ var SEM=null, DESP=null, GEST=null;
 
 function uid(){return Math.random().toString(36).slice(2,9)}
 function fmt(c){var n=c<0,a=Math.abs(c)/100;return (n?'-':'')+'R$'+a.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function margemPct(ganho,desp){return ganho>0?((ganho-desp)/ganho)*100:null}
+function fmtPct(v){return (v===null||v===undefined||!isFinite(v))?'—':v.toFixed(1).replace('.',',')+'%'}
 function parseVal(s){if(!s)return 0;s=String(s).trim().replace(/R\$\s?/gi,'');var n=/^-/.test(s);s=s.replace(/-/g,'').replace(/\./g,'').replace(',','.');var v=parseFloat(s);if(isNaN(v))v=0;return Math.round(v*100)*(n?-1:1)}
 function rawVal(v){return v?(v/100).toFixed(2).replace('.',','):''}
 function norPlaca(p){return String(p==null?'':p).toUpperCase().replace(/[^A-Z0-9]/g,'')}
@@ -300,23 +302,35 @@ function dentroDoMes(dataStr){ /* 'dd/mm/aaaa' pertence ao mês de referência? 
  var r=mesRef();
  return mm===r.m&&yy===r.y;
 }
-/* ---- rateio: cada semana vale (total ÷ dias da semana) por dia, e cada dia cai no seu mês ---- */
+/* ---- calendário econômico: toda semana vale 7 dias e cada centavo pertence a um dia ---- */
 function parseDMY(s){
  var p=String(s||'').split('/');
  var d=parseInt(p[0],10), m=parseInt(p[1],10), y=parseInt(p[2],10);
  if(isNaN(d)||isNaN(m)||isNaN(y)) return null;
- return new Date(y,m-1,d);
+ var x=new Date(y,m-1,d);
+ return (x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d)?x:null;
 }
+function diaLimpo(d){ return d?new Date(d.getFullYear(),d.getMonth(),d.getDate()):null }
+function chaveDia(d){ return d?d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2):'' }
+function somaDias(d,n){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n) }
+function mesmoDia(a,b){ return !!(a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()) }
+function entreDias(d,ini,fim){ return d>=ini&&d<=fim }
 var DIAS_CURTO=['dom','seg','ter','qua','qui','sex','sáb'];
-var FIM_SEMANA=3; /* quarta-feira: dia em que a semana fecha */
-function ancorarQuarta(d){ /* joga a data para a quarta-feira mais próxima */
+var FIM_SEMANA=3; /* quarta-feira: o período econômico é quinta→quarta */
+function ancorarQuarta(d){ /* datas históricas informadas como fechamento: usa a quarta mais próxima */
  if(!d) return null;
  var dif=(FIM_SEMANA-d.getDay()+7)%7;
  if(dif>3) dif-=7;
- return new Date(d.getFullYear(),d.getMonth(),d.getDate()+dif);
+ return somaDias(d,dif);
+}
+function periodoContendo(d){ /* semana econômica que contém a data: termina na próxima quarta (ou nela mesma) */
+ d=diaLimpo(d); if(!d) return null;
+ var dif=(FIM_SEMANA-d.getDay()+7)%7;
+ var fim=somaDias(d,dif);
+ return {ini:somaDias(fim,-6),fim:fim,dias:7};
 }
 function periodoSemana(w){
- /* o título da semana é a QUARTA final; o período são os 7 dias que terminam nela */
+ /* histórico: o título da semana identifica a quarta final; closedAt ajuda a descobrir o ano */
  var p=String((w&&w.week)||'').split('/');
  var d=parseInt(p[0],10), m=parseInt(p[1],10);
  var fech=parseDMY(w&&w.closedAt);
@@ -326,39 +340,72 @@ function periodoSemana(w){
   fim=new Date(ano,m-1,d);
   if(fech&&fim-fech>20*86400000) fim=new Date(ano-1,m-1,d);
  }
- if(!fim&&fech) fim=new Date(fech.getTime()-1*86400000);
+ if(!fim&&fech) fim=ancorarQuarta(fech);
  if(!fim) return null;
  fim=ancorarQuarta(fim);
- return {ini:new Date(fim.getFullYear(),fim.getMonth(),fim.getDate()-6),fim:fim,dias:7};
+ return {ini:somaDias(fim,-6),fim:fim,dias:7};
 }
 function fmtDia(d){ return d?('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2):'—' }
 function periodoTxt(p){ return p?fmtDia(p.ini)+' a '+fmtDia(p.fim):'—' }
+function limitesMesRef(){var r=mesRef();return {ini:new Date(r.y,r.m-1,1),fim:new Date(r.y,r.m,0)}}
 function diasNoMesRef(ini,fim){
- var r=mesRef(), n=0;
- for(var t=new Date(ini.getTime()); t<=fim; t=new Date(t.getTime()+86400000)){
-  if(t.getMonth()+1===r.m&&t.getFullYear()===r.y) n++;
- }
+ var l=limitesMesRef(), n=0;
+ for(var t=diaLimpo(ini); t&&t<=fim; t=somaDias(t,1)) if(entreDias(t,l.ini,l.fim)) n++;
  return n;
 }
-function rateioSemana(w){ /* quanto do valor da semana pertence ao mês de referência */
- var p=periodoSemana(w); if(!p||!p.dias) return 0;
- var dentro=diasNoMesRef(p.ini,p.fim);
- if(!dentro) return 0;
- return Math.round((w.paid||0)*dentro/p.dias);
+function valorDiaRateado(total,indice,dias){
+ dias=dias||7; total=Math.round(total||0);
+ var sinal=total<0?-1:1, a=Math.abs(total), q=Math.floor(a/dias), r=a%dias;
+ return sinal*(q+(indice<r?1:0));
 }
-function semFechadasNovas(){ /* semanas com dias no mês de referência, a partir do marco inicial */
+function valorPeriodoNoIntervalo(total,p,iniLim,fimLim){
+ if(!p||!iniLim||!fimLim) return 0;
+ var s=0,i=0;
+ for(var t=diaLimpo(p.ini);t<=p.fim;t=somaDias(t,1),i++) if(entreDias(t,iniLim,fimLim)) s+=valorDiaRateado(total,i,p.dias||7);
+ return s;
+}
+function rateioSemana(w){ /* quanto do valor fechado pertence ao mês de referência, sem perder centavos */
+ var p=periodoSemana(w); if(!p) return 0;
+ var l=limitesMesRef();
+ return valorPeriodoNoIntervalo(w&&w.paid||0,p,l.ini,l.fim);
+}
+function rateioSemanaPorMeses(w){
+ var p=periodoSemana(w), out={}; if(!p) return out;
+ var i=0;
+ for(var t=diaLimpo(p.ini);t<=p.fim;t=somaDias(t,1),i++){
+  var k=MESES[t.getMonth()]+'/'+t.getFullYear();
+  out[k]=(out[k]||0)+valorDiaRateado(w&&w.paid||0,i,p.dias||7);
+ }
+ return out;
+}
+function semFechadasNovas(){
  if(!SEM) return [];
- return toArr(SEM.history).filter(function(w){ return w&&rateioSemana(w)>0&&semanaDepoisDoInicio(w) });
+ return toArr(SEM.history).filter(function(w){return w&&rateioSemana(w)!==0&&semanaDepoisDoInicio(w)});
 }
-/* semana em aberto: rótulo é o início, 7 dias */
+function ultimaSemanaFechadaAte(fimCalendario){
+ var best=null;
+ if(!SEM) return null;
+ toArr(SEM.history).forEach(function(w){
+  var p=periodoSemana(w); if(!p||p.fim>fimCalendario) return;
+  if(!best||p.fim>best.p.fim) best={w:w,p:p};
+ });
+ return best;
+}
 function periodoAberto(){
- return periodoSemana({week:(SEM&&SEM.week)||'',closedAt:''})||
-        (function(){var r=mesRef();var f=ancorarQuarta(new Date(r.y,r.m-1,1));
-                    return {ini:new Date(f.getFullYear(),f.getMonth(),f.getDate()-6),fim:f,dias:7}})();
+ /* não confia no texto SEM.week para descobrir a semana atual: usa o calendário e o histórico.
+    Se a semana que termina nesta quarta já foi fechada, a aberta é automaticamente a próxima. */
+ var agora=diaLimpo(new Date());
+ var cal=periodoContendo(agora), ult=ultimaSemanaFechadaAte(cal.fim);
+ if(ult&&mesmoDia(ult.p.fim,cal.fim)){
+  var ini=somaDias(cal.fim,1), fim=somaDias(cal.fim,7);
+  return {ini:ini,fim:fim,dias:7};
+ }
+ return cal;
 }
 function fracaoAberta(){
- var p=periodoAberto();
- return diasNoMesRef(p.ini,p.fim)/p.dias;
+ var p=periodoAberto(), l=limitesMesRef();
+ var n=0; for(var t=diaLimpo(p.ini);t<=p.fim;t=somaDias(t,1)) if(entreDias(t,l.ini,l.fim)) n++;
+ return n/(p.dias||7);
 }
 /* ---------- leitura das DESPESAS ---------- */
 /* o app de Despesas não apaga de verdade: marca lápide (del:true) para a exclusão
@@ -379,6 +426,34 @@ function despTotalAtual(){
 function despPendentes(){
  return despItens().filter(function(i){return i.s!=='paid'});
 }
+function normDescDesp(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function ordemMes(label){
+ var p=String(label||'').toUpperCase().split('/'), mi=MESES.indexOf(p[0]), y=parseInt(p[1],10);
+ return (mi>=0&&!isNaN(y))?y*12+mi:0;
+}
+function ultimoValorDesp(i){
+ if(!DESP||!i||i.cat==='pix') return 0;
+ var desc=normDescDesp(i.desc),cat=String(i.cat||''),day=String(i.day||'');
+ var hs=toArr(DESP.history).slice().sort(function(a,b){return ordemMes(b&&b.month)-ordemMes(a&&a.month)});
+ for(var h=0;h<hs.length;h++){
+  var itens=toArr(hs[h]&&hs[h].items), melhor=null;
+  for(var j=0;j<itens.length;j++){
+   var x=itens[j]; if(!x||!(x.v>0)||normDescDesp(x.desc)!==desc||String(x.cat||'')!==cat) continue;
+   if(String(x.day||'')===day) return x.v;
+   if(melhor===null) melhor=x.v;
+  }
+  if(melhor!==null) return melhor;
+ }
+ return 0;
+}
+function valorDespProjetado(i){
+ if(!i) return 0;
+ if(typeof i.v==='number'&&i.v!==0) return i.v;
+ if(i.s==='paid') return i.v||0;
+ return ultimoValorDesp(i);
+}
+function despesasEstimadas(){return despItens().filter(function(i){return i.s!=='paid'&&(i.v||0)===0&&valorDespProjetado(i)!==0})}
+function despTotalProjetadoAtual(){var t=0;despItens().forEach(function(i){t+=valorDespProjetado(i)});return t}
 function despFechadosNovos(){ /* nada do histórico entra: o mês corrente é o das Despesas em aberto */
  return [];
 }
@@ -394,90 +469,109 @@ function saidas(){
  return t;
 }
 function saldo(){ return entradas()-saidas() }
-/* projeção: saldo + o que ainda entra − contas que vencem até o dia escolhido */
+/* ---------- PROJEÇÃO INTELIGENTE ----------
+   Regra: histórico fechado = valor real; semana aberta = total real esperado (pago+pendente);
+   semanas ainda futuras = média semanal. Tudo é distribuído pelos 7 dias e só a fração
+   pertencente ao mês/data entra na conta. Isso cobre automaticamente virada de mês/ano. */
 function contasAte(dia){
- var t=0;
+ var fim=diasNoMes(), alvo=Math.max(1,Math.min(parseInt(dia,10)||fim,fim)), t=0;
  despPendentes().forEach(function(i){
   var d=parseInt(i.day,10);
-  if(!isNaN(d)&&d<=dia) t+=(i.v||0);
+  if(alvo>=fim || (!isNaN(d)&&d<=alvo)) t+=valorDespProjetado(i); /* no fechamento, conta sem dia também entra */
  });
  return t;
 }
 /* média do que entra por semana — calculada das últimas semanas fechadas */
 function semanasDaMedia(){
- /* a média só serve para PREVER as semanas que ainda não aconteceram — não entra em
-    conta nenhuma do saldo. Por isso usa as 4 últimas fechadas, sem o corte do marco. */
  if(!SEM) return [];
- return toArr(SEM.history).filter(function(w){return w&&w.paid>0}).slice(0,4);
+ return toArr(SEM.history).filter(function(w){return w&&w.paid>0&&periodoSemana(w)}).sort(function(a,b){
+  return periodoSemana(b).fim-periodoSemana(a).fim;
+ }).slice(0,4);
 }
 function mediaSemanalAuto(){
  var hs=semanasDaMedia();
- if(hs.length){ var t=0; hs.forEach(function(w){t+=w.paid}); return Math.round(t/hs.length) }
- /* ainda não fechou nenhuma semana desde o início: usa a semana em aberto como referência */
+ if(hs.length){var t=0;hs.forEach(function(w){t+=w.paid});return Math.round(t/hs.length)}
+ /* primeiro mês/sem histórico: usa a semana aberta inteira se já houver valores cadastrados */
  var base=semRecebidoAtual()+semPendenteAtual();
  return base>0?base:0;
 }
 function origemMedia(){
  var n=semanasDaMedia().length;
  if(state.media) return 'definida por você';
- return n?('média das últimas '+n+' semana'+(n>1?'s':'')+' fechada'+(n>1?'s':'')):'base: total da semana em aberto (ainda não fechou semana desde o início)';
+ if(n) return 'média das últimas '+n+' semana'+(n>1?'s':'')+' fechada'+(n>1?'s':'');
+ return totalSemanaAbertaEsperado()>0?'sem histórico: usa a semana em aberto como referência':'sem base suficiente ainda';
 }
-function mediaSemanal(){ return (typeof state.media==='number'&&state.media>0)?state.media:mediaSemanalAuto() }
-function diasNoMes(){ var r=mesRef(); return new Date(r.y,r.m,0).getDate() }
+function mediaSemanal(){return (typeof state.media==='number'&&state.media>0)?state.media:mediaSemanalAuto()}
+function diasNoMes(){var r=mesRef();return new Date(r.y,r.m,0).getDate()}
 function diaHoje(){
- var d=new Date(), r=mesRef();
- if(d.getMonth()+1===r.m&&d.getFullYear()===r.y) return d.getDate();
- return 1;
+ var d=new Date(),r=mesRef();
+ if(d.getMonth()+1===r.m&&d.getFullYear()===r.y)return d.getDate();
+ var atual=d.getFullYear()*12+d.getMonth(), ref=r.y*12+(r.m-1);
+ return atual>ref?diasNoMes():1;
 }
-/* quantas quartas-feiras (dia de pagamento do semanal) caem entre amanhã e o dia X */
-function quartasAte(dia){
- var r=mesRef(), n=0;
- for(var d=diaHoje()+1; d<=dia; d++){
-  if(new Date(r.y,r.m-1,d).getDay()===3) n++;
+function mapaSemanasFechadas(){
+ var mapa={}; if(!SEM) return mapa;
+ toArr(SEM.history).forEach(function(w){
+  var p=periodoSemana(w); if(!p) return;
+  var k=chaveDia(p.fim); if(!mapa[k]) mapa[k]={w:w,p:p};
+ });
+ return mapa;
+}
+function mesmaSemana(a,b){return !!(a&&b&&mesmoDia(a.fim,b.fim))}
+function totalSemanaAbertaEsperado(){return semRecebidoAtual()+semPendenteAtual()}
+function basePeriodoProjetado(p){
+ var fech=mapaSemanasFechadas()[chaveDia(p.fim)];
+ if(fech) return {total:fech.w.paid||0,origem:'real fechada',tipo:'fechada'};
+ var pa=periodoAberto();
+ if(mesmaSemana(p,pa)){
+  var real=totalSemanaAbertaEsperado();
+  if(real>0) return {total:real,origem:'semana aberta (pago + pendente)',tipo:'aberta'};
  }
- return n;
+ var med=mediaSemanal();
+ return {total:med,origem:state.media?'média definida':'média histórica',tipo:'media'};
 }
-/* previsão de saldo em um dia do mês */
-function quartasDoMes(){ /* todas as quartas-feiras do mês de referência */
- var r=mesRef(), out=[], fim=diasNoMes();
- for(var d=1;d<=fim;d++){ if(new Date(r.y,r.m-1,d).getDay()===FIM_SEMANA) out.push(d) }
+function periodosDoMesAte(dia){
+ var r=mesRef(), fimMes=diasNoMes(), alvo=Math.max(1,Math.min(parseInt(dia,10)||fimMes,fimMes));
+ var ini=new Date(r.y,r.m-1,1), fim=new Date(r.y,r.m-1,alvo), p=periodoContendo(ini), out=[];
+ while(p&&p.ini<=fim){
+  out.push(p);
+  var ni=somaDias(p.fim,1), nf=somaDias(p.fim,7);
+  p={ini:ni,fim:nf,dias:7};
+ }
+ return {ini:ini,fim:fim,periodos:out};
+}
+function planoProjecao(dia){
+ var q=periodosDoMesAte(dia), out=[];
+ q.periodos.forEach(function(p){
+  var b=basePeriodoProjetado(p), dias=0;
+  for(var t=diaLimpo(p.ini);t<=p.fim;t=somaDias(t,1)) if(entreDias(t,q.ini,q.fim)) dias++;
+  var valor=valorPeriodoNoIntervalo(b.total,p,q.ini,q.fim);
+  if(dias) out.push({p:p,total:b.total,valor:valor,dias:dias,origem:b.origem,tipo:b.tipo});
+ });
  return out;
 }
-function quartasAte(dia){
- var n=0; quartasDoMes().forEach(function(d){ if(d>diaHoje()&&d<=dia) n++ });
- return n;
-}
-function fracaoQuarta(diaQuarta){ /* quanto da semana que fecha nesse dia pertence ao mês */
- var r=mesRef();
- var fim=new Date(r.y,r.m-1,diaQuarta);
- var ini=new Date(fim.getFullYear(),fim.getMonth(),fim.getDate()-6);
- return diasNoMesRef(ini,fim)/7;
-}
-function quartaDaSemanaAberta(){
- var p=periodoAberto(), r=mesRef();
- return (p&&p.fim.getMonth()+1===r.m&&p.fim.getFullYear()===r.y)?p.fim.getDate():0;
-}
-function aReceberAberto(){ /* pendente da semana em aberto, na parte que é deste mês */
- return Math.round(semPendenteAtual()*fracaoAberta());
+function ganhoProjetadoAte(dia){var t=0;planoProjecao(dia).forEach(function(x){t+=x.valor});return t}
+function ganhoProjetadoMes(){return ganhoProjetadoAte(diasNoMes())}
+function despesasProjetadasAte(dia){return despPagoAtual()+contasAte(dia)}
+function despesasProjetadasMes(){return despTotalProjetadoAtual()}
+function resultadoProjetadoMes(){return ganhoProjetadoMes()-despesasProjetadasMes()}
+function aReceberAberto(){
+ var p=periodoAberto(),l=limitesMesRef();
+ return valorPeriodoNoIntervalo(semPendenteAtual(),p,l.ini,l.fim);
 }
 function previsao(dia){
- var qa=quartaDaSemanaAberta(), entra=0, futuras=[];
- if(qa&&qa<=dia) entra+=aReceberAberto();          /* valor REAL, não média */
- quartasDoMes().forEach(function(d){
-  if(d>qa&&d<=dia&&d>=diaHoje()){ futuras.push(d); entra+=Math.round(mediaSemanal()*fracaoQuarta(d)) }
- });
- return {saldo:saldo()+entra-contasAte(dia), entra:entra, contas:contasAte(dia),
-         qa:(qa&&qa<=dia)?qa:0, futuras:futuras};
+ var ganho=ganhoProjetadoAte(dia), despesa=despesasProjetadasAte(dia), realizado=entradas();
+ return {saldo:ganho-despesa,ganho:ganho,despesa:despesa,
+         entra:Math.max(0,ganho-realizado),contas:contasAte(dia),margem:margemPct(ganho,despesa)};
 }
 /* pontos de checagem: só os dias em que há conta a vencer, + fim do mês */
 function checkpoints(){
- var dias={};
+ var dias={}, fim=diasNoMes();
  despPendentes().forEach(function(i){
   var d=parseInt(i.day,10);
-  if(!isNaN(d)&&d>=diaHoje()) dias[d]=true;
+  if(!isNaN(d)&&d>=diaHoje()&&d<=fim) dias[d]=true;
  });
  var arr=Object.keys(dias).map(Number).sort(function(a,b){return a-b});
- var fim=diasNoMes();
  if(arr.indexOf(fim)<0) arr.push(fim);
  return arr;
 }
@@ -651,62 +745,76 @@ function fonteAviso(){
   +'. Confira se todos estão sincronizados com a mesma chave da família.</div>';
 }
 function viewSaldo(){
- var s=saldo(), ent=entradas(), sai=saidas();
- var h=fonteAviso();
- var r=mesRef();
- var pa=periodoAberto(), da=diasNoMesRef(pa.ini,pa.fim), receberMes=aReceberAberto();
+ var s=saldo(), ent=entradas(), sai=saidas(), margemReal=margemPct(ent,sai);
+ var h=fonteAviso(), r=mesRef();
+ var pa=periodoAberto(), l=limitesMesRef(), da=diasNoMesRef(pa.ini,pa.fim), receberMes=aReceberAberto();
  h+='<section class="hero '+(s<0?'negative':'positive')+'">'
-  +'<div class="heroHead"><span class="heroLabel">Saldo do mês</span><span class="chip">'+esc(r.label)+'</span></div>'
+  +'<div class="heroHead"><span class="heroLabel">Resultado realizado</span><span class="chip">'+esc(r.label)+'</span></div>'
   +'<div class="heroValue '+(s<0?'r':'g')+'">'+fmt(s)+'</div>'
-  +'<div class="heroMeta">Movimento realizado desde o dia 1º, considerando apenas valores efetivamente recebidos e pagos.</div>'
+  +'<div class="heroMeta">O que já está confirmado no mês: semanas fechadas rateadas por dia + parte recebida da semana aberta − despesas já pagas.</div>'
   +'<div class="heroStats">'
-   +'<div class="heroStat"><div class="k">Entradas</div><div class="v g">'+fmt(ent)+'</div></div>'
-   +'<div class="heroStat"><div class="k">Saídas</div><div class="v r">'+fmt(sai)+'</div></div>'
-   +'<div class="heroStat"><div class="k">A receber</div><div class="v">'+fmt(receberMes)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Ganhos</div><div class="v g">'+fmt(ent)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Despesas</div><div class="v r">'+fmt(sai)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Margem</div><div class="v">'+fmtPct(margemReal)+'</div></div>'
   +'</div></section>';
 
  var med=mediaSemanal(), fim=diasNoMes(), pf=previsao(fim);
  h+='<section class="hero forecast">'
-  +'<div class="heroHead"><span class="heroLabel">Fechamento previsto</span><span class="chip">fim do mês</span></div>'
+  +'<div class="heroHead"><span class="heroLabel">Fechamento previsto</span><span class="chip">dia '+fim+'</span></div>'
   +'<div class="heroValue">'+fmt(pf.saldo)+'</div>'
-  +'<div class="heroMeta">Projeção com recebimentos esperados, média semanal e todas as contas ainda não pagas.</div>'
+  +'<div class="heroMeta">Previsão econômica do mês inteiro. Semanas futuras são estimadas pela média e toda semana que cruza a virada do mês entra somente pelos dias que pertencem a '+esc(r.label.split('/')[0])+'.</div>'
   +'<div class="heroStats">'
-   +'<div class="heroStat"><div class="k">Saldo hoje</div><div class="v">'+fmt(s)+'</div></div>'
-   +'<div class="heroStat"><div class="k">Entra até fim</div><div class="v g">'+fmt(pf.entra)+'</div></div>'
-   +'<div class="heroStat"><div class="k">Contas abertas</div><div class="v r">'+fmt(pf.contas)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Ganhos previstos</div><div class="v g">'+fmt(pf.ganho)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Despesas mês</div><div class="v r">'+fmt(pf.despesa)+'</div></div>'
+   +'<div class="heroStat"><div class="k">Margem prevista</div><div class="v">'+fmtPct(pf.margem)+'</div></div>'
   +'</div>'
-  +'<div class="heroMeta" style="margin-top:10px">Média semanal '+fmt(med)+' ('+origemMedia()+') <button class="mv" onclick="editarMedia()">alterar</button></div>'
+  +'<div class="heroMeta" style="margin-top:10px">Base futura: '+fmt(med)+' por semana ('+origemMedia()+') <button class="mv" onclick="editarMedia()">alterar</button>'
+  +(despesasEstimadas().length?' · '+despesasEstimadas().length+' despesa'+(despesasEstimadas().length>1?'s':'')+' ainda usa'+(despesasEstimadas().length>1?'m':'')+' o último valor conhecido.':'')+'</div>'
   +'</section>';
 
  var cps=checkpoints();
  if(cps.length){
   var apertado=cps.filter(function(d){return previsao(d).saldo<0});
-  h+='<section class="sectionCard"><div class="sectionHead"><span>Fluxo de caixa</span><span class="chip '+(apertado.length?'r':'g')+'">'+(apertado.length?'atenção':'saudável')+'</span></div>'
-   +'<div class="sectionIntro">Quanto deve restar após pagar tudo que vence até cada data.</div><div class="cashList">';
+  h+='<section class="sectionCard"><div class="sectionHead"><span>Projeção por vencimento</span><span class="chip '+(apertado.length?'r':'g')+'">'+(apertado.length?'atenção':'saudável')+'</span></div>'
+   +'<div class="sectionIntro">Resultado projetado acumulado até cada data, usando o rateio diário das semanas e as contas que vencem até ali.</div><div class="cashList">';
   cps.forEach(function(d){
    var p=previsao(d), contasDoDia=0;
-   despPendentes().forEach(function(i){ if(parseInt(i.day,10)===d) contasDoDia+=(i.v||0) });
+   despPendentes().forEach(function(i){if(parseInt(i.day,10)===d)contasDoDia+=(i.v||0)});
    h+='<div class="cashPoint '+(p.saldo<0?'bad':'ok')+'"><div class="day">'+d+'</div>'
-    +'<div class="desc"><b>'+(contasDoDia?'Vencimentos do dia':'Fechamento do mês')+'</b>'+(contasDoDia?('Contas '+fmt(contasDoDia)):'Saldo projetado final')+'</div>'
+    +'<div class="desc"><b>'+(d===fim?'Fechamento do mês':'Após vencimentos')+'</b>'+(contasDoDia?('Contas do dia '+fmt(contasDoDia)):('Ganhos proj. '+fmt(p.ganho)))+'</div>'
     +'<div class="amt">'+fmt(p.saldo)+'</div></div>';
   });
   h+='</div><div class="alertBox'+(apertado.length?' bad':'')+'">'+(apertado.length
-    ?'Nos dias '+apertado.join(', ')+' o caixa projetado fica negativo. Vale antecipar recebimentos ou rever algum vencimento.'
-    :'Pelo ritmo atual, nenhum checkpoint previsto fica negativo.')+'</div></section>';
+    ?'Nos dias '+apertado.join(', ')+' o resultado projetado fica negativo considerando os vencimentos já cadastrados.'
+    :'Nenhum checkpoint projetado fica negativo com os dados atuais.')+'</div></section>';
  }
 
  var det=semFechadasNovas();
  if(det.length||SEM){
-  h+='<details class="detailsCard"><summary>Como o saldo foi calculado</summary><div class="detailsBody">'
-   +'<div class="sectionIntro">Cada semana é rateada pelos sete dias; entram neste mês somente os dias que pertencem a '+esc(r.label.split("/")[0])+'.</div>';
+  h+='<details class="detailsCard"><summary>Como o realizado foi calculado</summary><div class="detailsBody">'
+   +'<div class="sectionIntro">Cada semanal fechado é dividido exatamente em 7 dias, em centavos. Assim uma semana entre dois meses nunca é jogada inteira para um único mês.</div>';
   det.forEach(function(w){
    var p=periodoSemana(w), dentro=p?diasNoMesRef(p.ini,p.fim):0;
    h+='<div class="financeRow"><span class="label">Semana '+esc(w.week)+' · '+periodoTxt(p)+' · '+dentro+' de 7 dias</span><span class="value g">'+fmt(rateioSemana(w))+'</span></div>';
   });
-  h+='<div class="financeRow"><span class="label">Semana em aberto · '+periodoTxt(pa)+' · '+da+' de 7 dias</span><span class="value g">'+fmt(Math.round(semRecebidoAtual()*fracaoAberta()))+'</span></div>'
-   +'<div class="financeRow"><span class="label">Contas já pagas no mês</span><span class="value r">'+fmt(sai)+'</span></div>'
-   +'<div class="totalRow"><span>Saldo do mês</span><span class="value '+(s<0?'r':'g')+'">'+fmt(s)+'</span></div>'
-   +'<div class="sectionIntro" style="margin-top:10px">Ainda falta receber desta semana <b>'+fmt(semPendenteAtual())+'</b>; a parcela pertencente a este mês é '+fmt(receberMes)+' ('+da+' de 7 dias).</div>'
+  var abertoReceb=valorPeriodoNoIntervalo(semRecebidoAtual(),pa,l.ini,l.fim);
+  h+='<div class="financeRow"><span class="label">Semana aberta · '+periodoTxt(pa)+' · '+da+' de 7 dias · recebido</span><span class="value g">'+fmt(abertoReceb)+'</span></div>'
+   +'<div class="financeRow"><span class="label">Despesas já pagas</span><span class="value r">'+fmt(sai)+'</span></div>'
+   +'<div class="totalRow"><span>Resultado realizado</span><span class="value '+(s<0?'r':'g')+'">'+fmt(s)+'</span></div>'
+   +'<div class="sectionIntro" style="margin-top:10px">Pendente da semana aberta: <b>'+fmt(semPendenteAtual())+'</b>. A parte pertencente a este mês é '+fmt(receberMes)+'.</div>'
+   +'</div></details>';
+ }
+
+ var plano=planoProjecao(fim);
+ if(plano.length){
+  h+='<details class="detailsCard"><summary>Como o fechamento foi projetado</summary><div class="detailsBody">'
+   +'<div class="sectionIntro">Regra automática: fechado usa valor real; semana aberta usa pago + pendente; semana futura usa a média. Depois cada total é repartido pelos 7 dias.</div>';
+  plano.forEach(function(x){
+   h+='<div class="financeRow"><span class="label">'+periodoTxt(x.p)+' · '+x.dias+' de 7 dias · '+esc(x.origem)+' ('+fmt(x.total)+')</span><span class="value g">'+fmt(x.valor)+'</span></div>';
+  });
+  h+='<div class="financeRow"><span class="label">Ganhos projetados do mês</span><span class="value g">'+fmt(pf.ganho)+'</span></div>'
+   +'<div class="financeRow"><span class="label">Despesas totais do mês</span><span class="value r">'+fmt(pf.despesa)+'</span></div>'
+   +'<div class="totalRow"><span>Fechamento previsto · margem '+fmtPct(pf.margem)+'</span><span class="value '+(pf.saldo<0?'r':'g')+'">'+fmt(pf.saldo)+'</span></div>'
    +'</div></details>';
  }
 
@@ -714,7 +822,8 @@ function viewSaldo(){
  if(pend.length){
   h+='<section class="sectionCard"><div class="sectionHead"><span>Próximas contas</span><span class="chip r">'+pend.length+' abertas</span></div>';
   pend.slice(0,12).forEach(function(i){
-   h+='<div class="financeRow"><span class="label">Dia '+esc(i.day||'--')+' · '+esc(i.desc)+'</span><span class="value r">'+fmt(i.v||0)+'</span></div>';
+   var vp=valorDespProjetado(i), est=(i.v||0)===0&&vp!==0;
+   h+='<div class="financeRow"><span class="label">Dia '+esc(i.day||'--')+' · '+esc(i.desc)+(est?' · estimado':'')+'</span><span class="value r">'+(est?'~ ':'')+fmt(vp)+'</span></div>';
   });
   h+='</section>';
  }
@@ -722,37 +831,49 @@ function viewSaldo(){
 }
 function viewMes(){
  var h=fonteAviso();
- var mesAtual=(DESP&&DESP.month)||'—';
- var ganhoAtual=entradas(), despAtual=saidas(), resAtual=ganhoAtual-despAtual;
+ var mesAtual=(DESP&&DESP.month)||mesRef().label;
+ var ganhoAtual=entradas(), despAtual=saidas(), resAtual=ganhoAtual-despAtual, margemAtual=margemPct(ganhoAtual,despAtual);
+ var ganhoPrev=ganhoProjetadoMes(), despPrev=despesasProjetadasMes(), resPrev=ganhoPrev-despPrev, margemPrev=margemPct(ganhoPrev,despPrev);
  h+='<section class="hero '+(resAtual<0?'negative':'positive')+'">'
-  +'<div class="heroHead"><span class="heroLabel">Resultado em andamento</span><span class="chip">'+esc(mesAtual)+'</span></div>'
+  +'<div class="heroHead"><span class="heroLabel">Resultado realizado</span><span class="chip">'+esc(mesAtual)+'</span></div>'
   +'<div class="heroValue '+(resAtual<0?'r':'g')+'">'+fmt(resAtual)+'</div>'
-  +'<div class="heroMeta">Acompanhamento iniciado em '+esc(mesInicioLabel())+'. Ganhos do mês são rateados por dia; despesas entram quando pagas.</div>'
+  +'<div class="heroMeta">Acumulado confirmado do mês. Ganhos são rateados pelos dias das semanas; despesas entram no realizado quando pagas.</div>'
   +'<div class="monthGrid">'
    +'<div class="metric"><div class="k">Ganhos</div><div class="v g">'+fmt(ganhoAtual)+'</div></div>'
    +'<div class="metric"><div class="k">Despesas</div><div class="v r">'+fmt(despAtual)+'</div></div>'
-   +'<div class="metric"><div class="k">Margem</div><div class="v '+(resAtual<0?'r':'g')+'">'+(ganhoAtual?((resAtual/ganhoAtual)*100).toFixed(1).replace('.',',')+'%':'—')+'</div></div>'
+   +'<div class="metric"><div class="k">Margem</div><div class="v '+(resAtual<0?'r':'g')+'">'+fmtPct(margemAtual)+'</div></div>'
   +'</div></section>';
+ h+='<section class="sectionCard"><div class="sectionHead"><span>Fechamento estimado</span><span class="chip a">projeção</span></div>'
+  +'<div class="totalRow"><span>Resultado previsto</span><span class="value '+(resPrev<0?'r':'g')+'">'+fmt(resPrev)+'</span></div>'
+  +'<div class="monthGrid">'
+   +'<div class="metric"><div class="k">Ganhos previstos</div><div class="v g">'+fmt(ganhoPrev)+'</div></div>'
+   +'<div class="metric"><div class="k">Despesas mês</div><div class="v r">'+fmt(despPrev)+'</div></div>'
+   +'<div class="metric"><div class="k">Margem prevista</div><div class="v '+(resPrev<0?'r':'g')+'">'+fmtPct(margemPrev)+'</div></div>'
+  +'</div><div class="sectionIntro" style="margin-top:9px">As semanas que ainda não fecharam usam a média de '+fmt(mediaSemanal())+'; semanas que cruzam a virada entram somente pelos dias do mês.'
+  +(despesasEstimadas().length?' Despesas fixas ainda zeradas usam temporariamente o último valor conhecido.':'')+'</div></section>';
+
  var meses=montaMeses();
  if(!meses.length){
   h+='<section class="sectionCard"><div class="empty">Nenhum mês fechado desde '+esc(mesInicioLabel())+'.<br>Conforme Semanal e Despesas forem fechando, o resultado aparece aqui automaticamente.</div>'
    +'<button class="addLine" onclick="openMes(null)">+ Lançar mês antigo à mão</button></section>';
  }else{
   var tg=0,td=0; meses.forEach(function(m){tg+=m.ganho;td+=m.desp});
-  var tr=tg-td;
+  var tr=tg-td, tm=margemPct(tg,td);
   h+='<section class="sectionCard"><div class="sectionHead"><span>Visão acumulada</span><span class="chip">'+meses.length+' meses</span></div>'
    +'<div class="monthGrid">'
     +'<div class="metric"><div class="k">Ganhos</div><div class="v g">'+fmt(tg)+'</div></div>'
     +'<div class="metric"><div class="k">Despesas</div><div class="v r">'+fmt(td)+'</div></div>'
-    +'<div class="metric"><div class="k">Resultado</div><div class="v '+(tr<0?'r':'g')+'">'+fmt(tr)+'</div></div>'
-   +'</div></section>';
+    +'<div class="metric"><div class="k">Resultado · '+fmtPct(tm)+'</div><div class="v '+(tr<0?'r':'g')+'">'+fmt(tr)+'</div></div>'
+   +'</div><div class="sectionIntro" style="margin-top:8px">Margem = resultado ÷ ganhos. Ela mostra quanto sobra de cada R$100 recebidos após as despesas consideradas.</div></section>';
   h+='<section class="sectionCard"><div class="sectionHead"><span>Evolução mensal</span><span class="chip">mais recente primeiro</span></div>';
   meses.forEach(function(m){
-   var rr=m.ganho-m.desp;
+   var rr=m.ganho-m.desp, mm=margemPct(m.ganho,m.desp);
    h+='<div class="monthEntry"><div class="monthTop"><div class="monthName">'+esc(m.mes)
     +(m.andamento?' <span class="chip g">em andamento</span>':'')+(m.manual?' <span class="chip a">manual</span>':'')+'</div>'
     +'<div class="monthResult '+(rr<0?'r':'g')+'">'+fmt(rr)+'</div></div>'
-    +'<div class="monthMeta">Ganhos '+fmt(m.ganho)+' · Despesas '+fmt(m.desp)+(m.semanas?' · '+m.semanas+' semana'+(m.semanas>1?'s':''):'')
+    +'<div class="monthMeta">Ganhos '+fmt(m.ganho)+' · Despesas '+fmt(m.desp)+' · Margem '+fmtPct(mm)
+    +(m.semanas?' · '+m.semanas+' semana'+(m.semanas>1?'s':''):'')
+    +(m.andamento&&typeof m.projGanho==='number'?' · Prev. '+fmt(m.projGanho-m.projDesp)+' · margem prev. '+fmtPct(margemPct(m.projGanho,m.projDesp)):'')
     +(m.manual?' · <button class="mv" onclick="openMes(\''+m.mid+'\')">editar</button>':'')+'</div></div>';
   });
   h+='<button class="addLine" onclick="openMes(null)">+ Lançar mês antigo à mão</button></section>';
@@ -773,16 +894,13 @@ function montaMeses(){
   if(!mapa[k])mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
   mapa[k].ganho+=g; mapa[k].desp+=dsp; mapa[k].semanas+=sem;
  }
+ /* histórico real do Semanal: cada centavo é distribuído pelos 7 dias e somado ao mês correto */
  if(SEM) toArr(SEM.history).forEach(function(w){
   if(!w||!semanaDepoisDoInicio(w)) return;
-  var p=periodoSemana(w); if(!p) return;
-  var porDia=(w.paid||0)/7, cont={};
-  for(var t=new Date(p.ini.getTime()); t<=p.fim; t=new Date(t.getFullYear(),t.getMonth(),t.getDate()+1)){
-   var k=MESES[t.getMonth()]+'/'+t.getFullYear();
-   cont[k]=(cont[k]||0)+porDia;
-  }
-  Object.keys(cont).forEach(function(k){ add(k,Math.round(cont[k]),0,1) });
+  var cont=rateioSemanaPorMeses(w);
+  Object.keys(cont).forEach(function(k){if(mesDepoisDoInicio(k))add(k,cont[k],0,1)});
  });
+ /* histórico de Despesas: resultado histórico continua seguindo o que foi efetivamente pago */
  if(DESP) toArr(DESP.history).forEach(function(m){
   var k=String((m&&m.month)||'').toUpperCase(); if(!k) return;
   add(k,0,(m.paid||0),0);
@@ -795,10 +913,7 @@ function montaMeses(){
   mapa[k].ganho+=(m.ganho||0); mapa[k].desp+=(m.desp||0); mapa[k].manual=true; mapa[k].mid=m.id;
   if(auto.indexOf(k)<0) auto.push(k);
  });
- /* o mês corrente ainda não fechou: sem isso ele entrava no acumulado só com a
-    fatia das semanas já fechadas e com despesa zero, ficando sempre atrasado.
-    Aqui ele passa a valer o que o Saldo mostra agora — semana aberta e contas
-    já pagas incluídas. Quando o mês fechar de verdade, o histórico assume. */
+ /* mês corrente: mostra realizado, mas carrega também a previsão final sem misturar os dois números */
  var kr=mesRef().label;
  if(mesDepoisDoInicio(kr)){
   if(!mapa[kr]) mapa[kr]={mes:kr,ganho:0,desp:0,semanas:0};
@@ -807,20 +922,22 @@ function montaMeses(){
    if(String((m&&m.month)||'').toUpperCase()===kr) jaFechado=true;
   });
   if(!jaFechado){
-   var extraM=0, extraD=0;
+   var extraM=0,extraD=0;
    manuais().forEach(function(m){
     if(m&&String(m.mes||'').toUpperCase()===kr){extraM+=(m.ganho||0);extraD+=(m.desp||0)}
    });
    mapa[kr].ganho=entradas()+extraM;
    mapa[kr].desp=saidas()+extraD;
+   mapa[kr].projGanho=ganhoProjetadoMes()+extraM;
+   mapa[kr].projDesp=despesasProjetadasMes()+extraD;
    mapa[kr].andamento=true;
   }
   if(auto.indexOf(kr)<0) auto.push(kr);
  }
  var arr=auto.map(function(k){return mapa[k]});
  arr.sort(function(a,b){
-  var pa=a.mes.split('/'), pb=b.mes.split('/');
-  var ya=parseInt(pa[1],10)||0, yb=parseInt(pb[1],10)||0;
+  var pa=a.mes.split('/'),pb=b.mes.split('/');
+  var ya=parseInt(pa[1],10)||0,yb=parseInt(pb[1],10)||0;
   if(ya!==yb) return yb-ya;
   return MESES.indexOf(pb[0])-MESES.indexOf(pa[0]);
  });
