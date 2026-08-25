@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=27; var APP_DATE='25/08/2026';
+var APP_VER=28; var APP_DATE='25/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -630,7 +630,46 @@ var MESES_PLANILHA=[
  {id:'pl-2026-06',mes:'JUNHO/2026',ganho:9335186,desp:6617272},
  {id:'pl-2026-07',mes:'JULHO/2026',ganho:9426879,desp:20419795}
 ];
-function manuais(){ return toArr(state.manuais).filter(function(m){return m&&!m.del}) }
+function _mesManualKey(m){return String(m&&m.mes||'').trim().toUpperCase()}
+function _manualPreferido(a,b){
+ if(!a)return b;if(!b)return a;
+ var aa=Number(a.at)||0,bb=Number(b.at)||0;
+ if(aa!==bb)return bb>aa?b:a;
+ var ab=String(a.by||''),bbb=String(b.by||'');
+ if(ab!==bbb)return bbb>ab?b:a;
+ /* empate absoluto: escolha determinística, sem somar os dois meses */
+ return String(b.id||'')>String(a.id||'')?b:a;
+}
+function manuais(){
+ /* Um mês manual é uma entidade única por competência (ex.: JULHO/2026).
+    Versões antigas podiam ter dois ids diferentes para o mesmo mês e o painel
+    somava os dois, dobrando ganhos e despesas. A visão de negócio nunca soma
+    duplicatas: mantém apenas o registro ativo mais recente daquela competência. */
+ var mapa={};
+ toArr(state.manuais).forEach(function(m){
+  if(!m||m.del)return;var k=_mesManualKey(m);if(!k)return;
+  mapa[k]=_manualPreferido(mapa[k],m);
+ });
+ return Object.keys(mapa).sort(function(a,b){return ordemMes(a)-ordemMes(b)}).map(function(k){return mapa[k]});
+}
+function repararManuaisDuplicados(){
+ /* Além de esconder a duplicata no cálculo, sepulta fisicamente os ids perdedores
+    para um iPhone antigo não voltar a trazê-los pela nuvem. Nunca altera os valores
+    do vencedor: se o usuário editou um mês, o mais recente é preservado. */
+ var grupos={},raw=toArr(state.manuais),mud=0,ts=Date.now();
+ raw.forEach(function(m){if(!m||m.del)return;var k=_mesManualKey(m);if(!k)return;(grupos[k]||(grupos[k]=[])).push(m)});
+ Object.keys(grupos).forEach(function(k){
+  var g=grupos[k];if(g.length<2)return;
+  var win=null;g.forEach(function(m){win=_manualPreferido(win,m)});
+  g.forEach(function(m){if(m!==win&&!m.del){m.del=true;m.at=ts;m.by=DEV;mud++}});
+ });
+ if(mud){
+  state.migs=toArr(state.migs);if(state.migs.indexOf('dedup-mes-manual-v28')<0)state.migs.push('dedup-mes-manual-v28');
+  persist();
+  if(SYNC.gotRemote||!SYNC.temSync){touch();persist();schedulePush()}
+ }
+ return mud;
+}
 
 /* Despesas de JANEIRO a JULHO/2026, tiradas da planilha Receita x Despesas do Fábio.
    ABRIL, MAIO, JUNHO e JULHO tinham ficado com despesa zero na semeadura;
@@ -677,10 +716,12 @@ function repararJulho(){
  return achou;
 }
 function aplicarCorrecoes(){
+ var dup=repararManuaisDuplicados();
  var n=migrarDespesasPlanilha();
  var j=repararJulho();
- if(j) setTimeout(function(){toast('✅ Julho restaurado')},1200);
- return n;
+ if(dup) setTimeout(function(){toast('✅ Meses duplicados corrigidos')},900);
+ else if(j) setTimeout(function(){toast('✅ Julho restaurado')},1200);
+ return n+dup;
 }
 function garantirManuais(){
  if(state.semeado) return;                    /* semeia uma única vez na vida do app */
@@ -1009,10 +1050,10 @@ function salvarMes(){
  var d=parseVal(document.getElementById('msDesp').value);
  var p=mes.split('/');
  if(MESES.indexOf(p[0])<0||isNaN(parseInt(p[1],10))){toast('⚠️ Escreva assim: ABRIL/2026');return}
- var lista=manuais().slice();
+ var lista=toArr(state.manuais).slice(); /* preserva túmulos de meses excluídos */
  if(MS_ID){ lista.forEach(function(x){ if(x.id===MS_ID){x.mes=mes;x.ganho=g;x.desp=d;x.at=agora();x.by=DEV} }) }
  else{
-  var ja=null; lista.forEach(function(x){ if(String(x.mes).toUpperCase()===mes) ja=x });
+  var ja=null; lista.forEach(function(x){ if(!x.del&&String(x.mes).toUpperCase()===mes) ja=_manualPreferido(ja,x) });
   if(ja){ ja.ganho=g; ja.desp=d; ja.at=agora(); ja.by=DEV; toast('Mês já existia — atualizado ✓') }
   else lista.push({id:uid(),mes:mes,ganho:g,desp:d,at:agora(),by:DEV});
  }
