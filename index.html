@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=25; var APP_DATE='24/08/2026';
+var APP_VER=27; var APP_DATE='25/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1092,7 +1092,17 @@ function _rMeusArray(mm){return Object.keys(mm||{}).filter(function(p){return mm
 
 /* ================= SINCRONIZAÇÃO ================= */
 var DEV=(function(){try{var d=localStorage.getItem('guimas_dev');if(!d){d=uid()+uid();localStorage.setItem('guimas_dev',d)}return d}catch(e){return uid()}})();
-var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,gotRemote:false,temSync:false};
+var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,gotRemote:false,temSync:false,lastToastAt:0,pendingRemote:null,renderPending:false};
+function _rCanonSync(x,root){if(Array.isArray(x)){var a=x.map(function(v){return _rCanonSync(v,false)});a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(root&&(k==='rev'||k==='dev'))return;o[k]=_rCanonSync(x[k],false)});return o}return x}
+function _rSyncSig(x){return JSON.stringify(_rCanonSync(x||{},true))}
+function _rSyncIgual(a,b){return _rSyncSig(a)===_rSyncSig(b)}
+function _rCanonBusiness(x,root){if(Array.isArray(x)){var a=x.map(function(v){return _rCanonBusiness(v,false)});a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(k==='at'||k==='by'||(root&&(k==='rev'||k==='dev'||k==='meta')))return;o[k]=_rCanonBusiness(x[k],false)});return o}return x}
+function _rBusinessSig(x){return JSON.stringify(_rCanonBusiness(x||{},true))}
+function _rBusinessIgual(a,b){return _rBusinessSig(a)===_rBusinessSig(b)}
+function inputFocused(){var a=document.activeElement;return !!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))}
+function _rRenderSeguro(){if(inputFocused()){SYNC.renderPending=true;return}SYNC.renderPending=false;render()}
+setInterval(function(){if(SYNC.renderPending&&!inputFocused())_rRenderSeguro();if(SYNC.pendingRemote&&!inputFocused()){var x=SYNC.pendingRemote;SYNC.pendingRemote=null;_rAdoptRemote(x)}},700);
+function _rToastSync(){var n=Date.now();if(n-SYNC.lastToastAt<3000)return;SYNC.lastToastAt=n;toast('🔄 Sincronização atualizada')}
 function touch(){state.rev=Date.now();state.dev=DEV}
 var BENS_GUARD=KEY+'_bens_guard';
 function guardarBens(){try{localStorage.setItem(BENS_GUARD,JSON.stringify(toArr(state&&state.bens)))}catch(e){}}
@@ -1131,7 +1141,7 @@ function mesclar(remoto,local){
 }
 function norm(s){
  if(!s||typeof s!=='object')s={};var meta=(s.meta&&typeof s.meta==='object')?JSON.parse(JSON.stringify(s.meta)):{},rv=Number(s.rev)||0,by=s.dev||'legacy';
- if(meta.media===undefined&&typeof s.media==='number')meta.media={at:rv||1,by:by};if(meta.inicio===undefined&&s.inicio)meta.inicio={at:rv||1,by:by};if(meta.fipeSnap===undefined&&s.fipeSnap)meta.fipeSnap={at:rv||1,by:by};if(meta.meus===undefined&&s.meus!==undefined)meta.meus={at:rv||1,by:by};
+ if(meta.media===undefined&&typeof s.media==='number')meta.media={at:rv||1,by:by};if(meta.inicio===undefined&&s.inicio)meta.inicio={at:rv||1,by:by};if(meta.fipeSnap===undefined&&s.fipeSnap&&Object.keys(s.fipeSnap).length)meta.fipeSnap={at:rv||1,by:by};if(meta.meus===undefined&&s.meus!==undefined)meta.meus={at:rv||1,by:by};
  var rawmm=s.meusMeta&&typeof s.meusMeta==='object'?JSON.parse(JSON.stringify(s.meusMeta)):{};toArr(s.meus).forEach(function(p){p=norPlaca(p);if(p&&!rawmm[p])rawmm[p]={v:true,at:rv||1,by:by}});var mm={};Object.keys(rawmm).sort().forEach(function(k){mm[k]=rawmm[k]});
  var fs=s.fipeSnap&&typeof s.fipeSnap==='object'?s.fipeSnap:{},fipe={};Object.keys(fs).sort().forEach(function(k){fipe[k]=fs[k]});
  var mans=s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,by:m.by||'',del:!!m.del}}).sort(function(a,b){var aa=Number(a.at)||0,bb=Number(b.at)||0;if(aa!==bb)return aa-bb;return String(a.id).localeCompare(String(b.id))});
@@ -1149,6 +1159,9 @@ function syncCfg(){try{return JSON.parse(localStorage.getItem('guimas_consolidad
 function setPill(m,t){var p=document.getElementById('syncPill');p.className='syncpill'+(m?' '+m:'');p.textContent=t}
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 function famHash(key){return crypto.subtle.digest('SHA-256',new TextEncoder().encode('guimas:'+key)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')})}
+function _rAdoptRemote(v){
+ var soSemente=!(state.rev>0),remoto=norm(v),antes=norm(state),juntos=soSemente?remoto:norm(mesclar(remoto,antes)),precisaReenviar=!soSemente&&!_rBusinessIgual(juntos,remoto),mudaDados=!_rBusinessIgual(juntos,antes),mudaMeta=!_rSyncIgual(juntos,antes);state=juntos;if(mudaMeta||soSemente)persist();aplicarCorrecoes();if(soSemente||mudaDados)_rRenderSeguro();if(precisaReenviar){touch();persist();schedulePush()}else if(SYNC.pendingPush)push();if(!soSemente&&mudaDados)_rToastSync();
+}
 function startSync(){
  var cfg=syncCfg();
  if(!cfg||!cfg.config||!cfg.key){SYNC.temSync=false;setPill('','⚪ sem sync');return}
@@ -1178,19 +1191,13 @@ function startSync(){
       antigo não apagar uma casa ou outro patrimônio cadastrado no outro. */
    var soSemente=!(state.rev>0);
    if(!soSemente&&v.dev===DEV){ if(SYNC.pendingPush)push(); return }
-   var remoto=norm(v), antes=norm(state), juntos=soSemente?remoto:norm(mesclar(remoto,antes));
-   var precisaReenviar=!soSemente&&JSON.stringify(juntos)!==JSON.stringify(remoto);
-   state=juntos;persist();
-   aplicarCorrecoes();
-   render();
-   if(precisaReenviar){touch();persist();schedulePush()}
-   else if(SYNC.pendingPush)push();
-   if(!soSemente)toast('🔄 Sincronização conferida');
+   if(inputFocused()){SYNC.pendingRemote=SYNC.pendingRemote?mesclar(SYNC.pendingRemote,v):v;return}
+   _rAdoptRemote(v);
   },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
   /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
-  db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;render()},function(){});
-  db.ref('familias/'+h+'/despesas').on('value',function(s){DESP=s.val()||null;render()},function(){});
-  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;try{registrarFipe()}catch(e){};render()},function(){});
+  db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;_rRenderSeguro()},function(){});
+  db.ref('familias/'+h+'/despesas').on('value',function(s){DESP=s.val()||null;_rRenderSeguro()},function(){});
+  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;try{registrarFipe()}catch(e){};_rRenderSeguro()},function(){});
   db.ref('.info/connected').on('value',function(s){
    SYNC.online=!!s.val();
    if(!SYNC.online) SYNC.gotRemote=false;
@@ -1202,18 +1209,15 @@ function startSync(){
 function push(){
  if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;return} /* espera a primeira leitura */
  if(!SYNC.ref){SYNC.pendingPush=true;return}
- SYNC.pendingPush=false;
- var local=norm(state);
- /* Transação atômica: antes de gravar, une o que existe na nuvem com este aparelho.
-    Assim um iPhone desatualizado não consegue apagar bens/manuais do outro. */
+ SYNC.pendingPush=false;var local=norm(state);
+ /* Transação atômica + no-op real: se a nuvem já contém o mesmo conteúdo, não cria
+    uma nova revisão artificial e não dispara outro ciclo de sincronização. */
  SYNC.ref.transaction(function(cur){
-  var junto=cur?norm(mesclar(cur,local)):norm(local);
-  junto.rev=Math.max(Date.now(),local.rev||0,(cur&&cur.rev)||0);
-  junto.dev=DEV;
-  return junto;
+  var junto=cur?norm(mesclar(cur,local)):norm(local);if(cur&&_rBusinessIgual(junto,cur))return;
+  junto.rev=Math.max(Date.now(),local.rev||0,(cur&&cur.rev)||0);junto.dev=DEV;return junto;
  },function(err,committed,snap){
-  if(err||!committed){SYNC.pendingPush=true;return}
-  if(snap&&snap.val()){var remoto=norm(snap.val()),atual=norm(state),junto=norm(mesclar(remoto,atual)),precisa=JSON.stringify(junto)!==JSON.stringify(remoto);state=junto;persist();render();if(precisa){touch();persist();schedulePush()}}
+  if(err){SYNC.pendingPush=true;return}if(!committed){SYNC.pendingPush=false;return}
+  if(snap&&snap.val()){var remoto=norm(snap.val()),atual=norm(state),junto=norm(mesclar(remoto,atual)),mudaDados=!_rBusinessIgual(junto,atual),mudaMeta=!_rSyncIgual(junto,atual),precisa=!_rBusinessIgual(junto,remoto);if(mudaMeta){state=junto;persist()}if(mudaDados)_rRenderSeguro();if(precisa){touch();persist();schedulePush()}}
  },false);
 }
 function schedulePush(){clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1200)}
