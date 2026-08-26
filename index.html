@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=29; var APP_DATE='26/08/2026';
+var APP_VER=31; var APP_DATE='26/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1299,13 +1299,18 @@ function disableSync(){localStorage.removeItem('guimas_consolidado_sync');SYNC.r
 /* ---------- auto-atualização ---------- */
 function safeToReload(){try{var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return false;var o=document.querySelectorAll?document.querySelectorAll('.overlay.open'):[];if(o&&o.length)return false}catch(e){}return true}
 var _updFound=false;
+function _updNavigate(nv){
+ try{
+  var u=new URL(location.href);u.searchParams.set('v',String(nv));u.searchParams.set('_upd',String(Date.now()));location.replace(u.href);
+ }catch(e){try{location.replace(location.pathname+'?v='+nv+'&_upd='+Date.now())}catch(e2){location.reload()}}
+}
 function checkUpdate(){
  try{
   fetch('index.html?upd='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
    var m=t.match(/APP_VER=(\d+)/);
    if(m&&parseInt(m[1],10)>APP_VER&&!_updFound){
     _updFound=true;var nv=parseInt(m[1],10);toast('⬆️ Atualizando para a v'+nv+'…');
-    setTimeout(function tr(){if(safeToReload()){try{document.open();document.write(t);document.close()}catch(e){try{location.replace(location.pathname+'?v='+nv)}catch(e2){location.reload()}}}else setTimeout(tr,5000)},700);
+    setTimeout(function tr(){if(safeToReload())_updNavigate(nv);else setTimeout(tr,5000)},700);
    }
   }).catch(function(){});
  }catch(e){}
@@ -1332,7 +1337,7 @@ try{
  localStorage.setItem('guimas_consolidado_ver',String(APP_VER));
 }catch(e){}
 startSync();
-try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}
+try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(r){try{r.update()}catch(e){}}).catch(function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}catch(e){}
 </script>
 </body>
 </html>

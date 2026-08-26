@@ -1,23 +1,42 @@
-var CACHE='resultado-guimas-v1';
-var ASSETS=['./','./index.html','./icone.png'];
-self.addEventListener('install',function(e){
- self.skipWaiting();
- e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ASSETS).catch(function(){})}));
+/* GuimasCar resultados — Service Worker seguro v31
+   HTML/navegação: NETWORK-FIRST. Cache é apenas fallback offline. */
+const CACHE='guimas-resultados-shell-v31';
+const PREFIX='guimas-resultados-shell-v';
+const INDEX=new URL('./index.html',self.registration.scope).href;
+
+self.addEventListener('install',event=>{
+  event.waitUntil((async()=>{
+    const c=await caches.open(CACHE);
+    try{const r=await fetch(INDEX,{cache:'no-store'});if(r&&r.ok)await c.put(INDEX,r.clone());}catch(e){}
+    await self.skipWaiting();
+  })());
 });
-self.addEventListener('activate',function(e){
- e.waitUntil(caches.keys().then(function(ks){
-  return Promise.all(ks.map(function(k){if(k!==CACHE)return caches.delete(k)}));
- }).then(function(){return self.clients.claim()}));
+
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const ks=await caches.keys();
+    await Promise.all(ks.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
-self.addEventListener('fetch',function(e){
- var u=e.request.url;
- if(e.request.method!=='GET')return;
- if(u.indexOf('firebaseio.com')>-1||u.indexOf('googleapis.com')>-1||u.indexOf('firebaseapp.com')>-1)return;
- e.respondWith(
-  fetch(e.request).then(function(r){
-   var cp=r.clone();
-   caches.open(CACHE).then(function(c){c.put(e.request,cp).catch(function(){})});
-   return r;
-  }).catch(function(){return caches.match(e.request).then(function(m){return m||caches.match('./index.html')})})
- );
+
+function isHtml(req,url){
+  return req.mode==='navigate'||url.pathname.endsWith('/')||url.pathname.endsWith('/index.html');
+}
+
+self.addEventListener('fetch',event=>{
+  const req=event.request;if(req.method!=='GET')return;
+  const url=new URL(req.url);if(url.origin!==self.location.origin)return;
+  if(!isHtml(req,url))return;
+  event.respondWith((async()=>{
+    const c=await caches.open(CACHE);
+    try{
+      const fresh=await fetch(req,{cache:'no-store'});
+      if(fresh&&fresh.ok)await c.put(INDEX,fresh.clone());
+      return fresh;
+    }catch(e){
+      const hit=await c.match(INDEX);if(hit)return hit;
+      throw e;
+    }
+  })());
 });
