@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=28; var APP_DATE='25/08/2026';
+var APP_VER=29; var APP_DATE='26/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -255,6 +255,17 @@ var MEUS_PADRAO=['LQZ6C72','OYZ9079','QUB5B64','RJZ1B66'];
 var state={rev:0,dev:'',bens:[],meus:MEUS_PADRAO.slice(),media:null,inicio:null,manuais:null,migs:[],semeado:false};
 /* espelhos SOMENTE LEITURA dos outros apps */
 var SEM=null, DESP=null, GEST=null;
+/* v29: as três fontes externas chegam em callbacks separados. Antes cada callback
+   reconstruía a tela inteira, causando flash e até quadros transitórios com fontes de
+   momentos diferentes. Agora a primeira apresentação espera o lote inicial e updates
+   próximos são agrupados em um único render semântico. */
+var EXT={ready:{sem:false,desp:false,gest:false},boot:true,timer:null,last:{sem:'',desp:'',gest:''},deadline:null};
+function _extCanon(x){if(Array.isArray(x)){var a=x.map(_extCanon);a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(k==='rev'||k==='dev'||k==='at'||k==='by'||k==='weekAt'||k==='monthAt'||k==='fm')return;o[k]=_extCanon(x[k])});return o}return x}
+function _extSig(x){return JSON.stringify(_extCanon(x||null))}
+function _extAllReady(){return EXT.ready.sem&&EXT.ready.desp&&EXT.ready.gest}
+function _extSchedule(){clearTimeout(EXT.timer);EXT.timer=setTimeout(function(){if(EXT.boot&&!_extAllReady())return;EXT.boot=false;_rRenderSeguro()},90)}
+function _extSet(k,v){var sg=_extSig(v),mud=sg!==EXT.last[k];EXT.last[k]=sg;EXT.ready[k]=true;if(k==='sem')SEM=v||null;else if(k==='desp')DESP=v||null;else GEST=v||null;if(!mud&&!EXT.boot)return;if(_extAllReady()){EXT.boot=false;_extSchedule()}else if(!EXT.deadline){EXT.deadline=setTimeout(function(){EXT.boot=false;_extSchedule()},2200)}}
+
 
 function uid(){return Math.random().toString(36).slice(2,9)}
 function fmt(c){var n=c<0,a=Math.abs(c)/100;return (n?'-':'')+'R$'+a.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -762,6 +773,7 @@ function semanaDepoisDoInicio(w){
 function setTab(t){TAB=t;render()}
 function render(){
  var _sy=0; try{_sy=window.scrollY||window.pageYOffset||0}catch(e){}
+ if(typeof EXT!=='undefined'&&EXT.boot&&!_extAllReady()){var vw=document.getElementById('view');if(vw)vw.innerHTML='<section class="sectionCard"><div class="sectionTitle">Sincronizando dados…</div><div class="sectionIntro">Conferindo Semanal, Despesas e Gestão antes de calcular o painel.</div></section>';return}
  ['saldo','mes','patr'].forEach(function(t){
   var b=document.getElementById('tb-'+t); if(b) b.className=(TAB===t?'sel':'');
  });
@@ -1236,9 +1248,9 @@ function startSync(){
    _rAdoptRemote(v);
   },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
   /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
-  db.ref('familias/'+h+'/estado').on('value',function(s){SEM=s.val()||null;_rRenderSeguro()},function(){});
-  db.ref('familias/'+h+'/despesas').on('value',function(s){DESP=s.val()||null;_rRenderSeguro()},function(){});
-  db.ref('familias/'+h+'/gestao').on('value',function(s){GEST=s.val()||null;try{registrarFipe()}catch(e){};_rRenderSeguro()},function(){});
+  db.ref('familias/'+h+'/estado').on('value',function(s){_extSet('sem',s.val()||null)},function(){});
+  db.ref('familias/'+h+'/despesas').on('value',function(s){_extSet('desp',s.val()||null)},function(){});
+  db.ref('familias/'+h+'/gestao').on('value',function(s){_extSet('gest',s.val()||null);try{registrarFipe()}catch(e){}},function(){});
   db.ref('.info/connected').on('value',function(s){
    SYNC.online=!!s.val();
    if(!SYNC.online) SYNC.gotRemote=false;
@@ -1292,13 +1304,13 @@ function checkUpdate(){
   fetch('index.html?upd='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
    var m=t.match(/APP_VER=(\d+)/);
    if(m&&parseInt(m[1],10)>APP_VER&&!_updFound){
-    _updFound=true;toast('⬆️ Atualizando para a versão nova…');
-    setTimeout(function tr(){ if(safeToReload())location.reload(); else setTimeout(tr,20000) },1500);
+    _updFound=true;var nv=parseInt(m[1],10);toast('⬆️ Atualizando para a v'+nv+'…');
+    setTimeout(function tr(){if(safeToReload()){try{document.open();document.write(t);document.close()}catch(e){try{location.replace(location.pathname+'?v='+nv)}catch(e2){location.reload()}}}else setTimeout(tr,5000)},700);
    }
   }).catch(function(){});
  }catch(e){}
 }
-setTimeout(checkUpdate,4000);
+setTimeout(checkUpdate,800);
 try{
  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')checkUpdate()});
  window.addEventListener('pageshow',function(e){if(e&&e.persisted)checkUpdate()});
