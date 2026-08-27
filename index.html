@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=31; var APP_DATE='26/08/2026';
+var APP_VER=32; var APP_DATE='27/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -403,15 +403,23 @@ function ultimaSemanaFechadaAte(fimCalendario){
  return best;
 }
 function periodoAberto(){
- /* não confia no texto SEM.week para descobrir a semana atual: usa o calendário e o histórico.
-    Se a semana que termina nesta quarta já foi fechada, a aberta é automaticamente a próxima. */
- var agora=diaLimpo(new Date());
- var cal=periodoContendo(agora), ult=ultimaSemanaFechadaAte(cal.fim);
- if(ult&&mesmoDia(ult.p.fim,cal.fim)){
-  var ini=somaDias(cal.fim,1), fim=somaDias(cal.fim,7);
-  return {ini:ini,fim:fim,dias:7};
+ /* A competência aberta vem do próprio Semanal. Ela NÃO avança apenas porque virou quinta-feira:
+    só muda quando o Semanal fecha/reabre e altera SEM.week. Isso impede que lançamentos ainda
+    pertencentes à semana anterior sejam projetados como se já fossem da semana seguinte. */
+ if(SEM){
+  var p=String(SEM.week||'').trim().split('/'), d=parseInt(p[0],10), m=parseInt(p[1],10);
+  if(!isNaN(d)&&!isNaN(m)&&d>=1&&d<=31&&m>=1&&m<=12){
+   var rt=Number(SEM.weekAt)||Date.now(), ref=new Date(rt); if(isNaN(ref.getTime()))ref=new Date();
+   var ys=[ref.getFullYear()-1,ref.getFullYear(),ref.getFullYear()+1],fim=null,best=Infinity;
+   ys.forEach(function(y){
+    var x=new Date(y,m-1,d); if(x.getFullYear()!==y||x.getMonth()!==m-1||x.getDate()!==d)return;
+    var dist=Math.abs(x-ref); if(dist<best){best=dist;fim=x}
+   });
+   if(fim){fim=ancorarQuarta(fim);return {ini:somaDias(fim,-6),fim:fim,dias:7}}
+  }
  }
- return cal;
+ /* fallback apenas para base ausente/legada: sem Semanal válido, usa o calendário. */
+ return periodoContendo(diaLimpo(new Date()));
 }
 function fracaoAberta(){
  var p=periodoAberto(), l=limitesMesRef();
@@ -470,7 +478,10 @@ function despFechadosNovos(){ /* nada do histórico entra: o mês corrente é o 
 }
 /* ---------- SALDO ---------- */
 function entradas(){
- var t=Math.round(semRecebidoAtual()*fracaoAberta());
+ /* usa o mesmo rateio exato em centavos exibido no detalhamento; evita diferença de 1 centavo
+    causada por multiplicação em ponto flutuante quando a semana cruza a virada do mês. */
+ var p=periodoAberto(),l=limitesMesRef();
+ var t=valorPeriodoNoIntervalo(semRecebidoAtual(),p,l.ini,l.fim);
  semFechadasNovas().forEach(function(w){ t+=rateioSemana(w) });
  return t;
 }
