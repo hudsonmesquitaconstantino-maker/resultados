@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=32; var APP_DATE='27/08/2026';
+var APP_VER=34; var APP_DATE='31/08/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -299,11 +299,7 @@ function semPendenteAtual(){
  });
  return t;
 }
-function mesRef(){ /* mês de referência: o mês aberto nas Despesas, ou o mês do sistema */
- var m=(DESP&&DESP.month)||'';
- var k=String(m).toUpperCase().split('/');
- var i=MESES.indexOf(k[0]), y=parseInt(k[1],10);
- if(i>=0&&!isNaN(y)) return {m:i+1,y:y,label:MESES[i]+'/'+y};
+function mesRef(){ /* competência do Resultados = mês civil atual; fontes podem fechar em momentos diferentes */
  var d=new Date();
  return {m:d.getMonth()+1,y:d.getFullYear(),label:MESES[d.getMonth()]+'/'+d.getFullYear()};
 }
@@ -380,14 +376,55 @@ function rateioSemana(w){ /* quanto do valor fechado pertence ao mês de referê
  var l=limitesMesRef();
  return valorPeriodoNoIntervalo(w&&w.paid||0,p,l.ini,l.fim);
 }
-function rateioSemanaPorMeses(w){
- var p=periodoSemana(w), out={}; if(!p) return out;
+function rateioPeriodoPorMeses(total,p){
+ var out={}; if(!p) return out;
  var i=0;
  for(var t=diaLimpo(p.ini);t<=p.fim;t=somaDias(t,1),i++){
   var k=MESES[t.getMonth()]+'/'+t.getFullYear();
-  out[k]=(out[k]||0)+valorDiaRateado(w&&w.paid||0,i,p.dias||7);
+  out[k]=(out[k]||0)+valorDiaRateado(total||0,i,p.dias||7);
  }
  return out;
+}
+function rateioSemanaPorMeses(w){return rateioPeriodoPorMeses(w&&w.paid||0,periodoSemana(w))}
+/* Uma competência mensal só fica definitiva quando TODAS as semanas econômicas que
+   encostam nela estiverem fechadas no Semanal. Isso é essencial na virada: por exemplo,
+   27/08→02/09 mantém AGOSTO provisório até o fechamento da semana; depois o valor real
+   é repartido 5/7 para agosto e 2/7 para setembro. */
+function limitesMesLabel(label){
+ var p=String(label||'').toUpperCase().split('/'),mi=MESES.indexOf(p[0]),y=parseInt(p[1],10);
+ if(mi<0||isNaN(y))return null;
+ return {ini:new Date(y,mi,1),fim:new Date(y,mi+1,0)};
+}
+function semanasFechadasPorFim(){
+ var mapa={}; if(!SEM)return mapa;
+ toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){
+  var p=periodoSemana(w);if(!p)return;
+  mapa[chaveDia(p.fim)]={w:w,p:p};
+ });
+ return mapa;
+}
+function periodosDaCompetencia(label){
+ var l=limitesMesLabel(label),out=[];if(!l)return out;
+ var p=periodoContendo(l.ini);
+ while(p&&p.ini<=l.fim){out.push(p);p={ini:somaDias(p.fim,1),fim:somaDias(p.fim,7),dias:7}}
+ return out;
+}
+function competenciaSemanalPendente(label){
+ var fech=semanasFechadasPorFim(),ps=periodosDaCompetencia(label);
+ for(var i=0;i<ps.length;i++)if(!fech[chaveDia(ps[i].fim)])return true;
+ return false;
+}
+function ganhoProjetadoCompetencia(label){
+ var l=limitesMesLabel(label);if(!l)return 0;
+ var fech=semanasFechadasPorFim(),pa=periodoAberto(),aberto=totalSemanaAbertaEsperado(),med=mediaSemanal(),t=0;
+ periodosDaCompetencia(label).forEach(function(p){
+  var f=fech[chaveDia(p.fim)],total=0;
+  if(f)total=f.w.paid||0;
+  else if(mesmaSemana(p,pa)&&aberto>0)total=aberto;
+  else total=med;
+  t+=valorPeriodoNoIntervalo(total,p,l.ini,l.fim);
+ });
+ return t;
 }
 function semFechadasNovas(){
  if(!SEM) return [];
@@ -430,19 +467,35 @@ function fracaoAberta(){
 /* o app de Despesas não apaga de verdade: marca lápide (del:true) para a exclusão
    viajar entre os aparelhos. Quem lê tem de ignorar essas linhas, senão uma conta
    já excluída continua pesando aqui e o total não bate com o app de Despesas. */
+function histDespMes(label){
+ if(!DESP)return null;var k=String(label||'').toUpperCase(),best=null;
+ toArr(DESP.history).forEach(function(h){
+  if(!h||h.del||String(h.month||'').toUpperCase()!==k)return;
+  if(!best||(Number(h.at)||0)>(Number(best.at)||0))best=h;
+ });
+ return best;
+}
+function despMesRefFechado(){
+ if(!DESP)return null;
+ var ref=mesRef().label,atual=String(DESP.month||'').toUpperCase();
+ return atual===ref?null:histDespMes(ref);
+}
 function despItens(){
- if(!DESP) return [];
- var m=String(DESP.month||'').toUpperCase();return toArr(DESP.items).filter(function(i){return i&&!i.del&&(!i.mes||String(i.mes).toUpperCase()===m)});
+ if(!DESP)return [];
+ var ref=mesRef().label,atual=String(DESP.month||'').toUpperCase();
+ if(atual!==ref)return []; /* se Despesas já avançou, o mês civil vem do histórico fechado */
+ return toArr(DESP.items).filter(function(i){return i&&!i.del&&(!i.mes||String(i.mes).toUpperCase()===atual)});
 }
 function despPagoAtual(){
- var t=0; despItens().forEach(function(i){ if(i.s==='paid') t+=(i.v||0) });
- return t;
+ var h=despMesRefFechado();if(h)return Number(h.paid)||0;
+ var t=0;despItens().forEach(function(i){if(i.s==='paid')t+=(i.v||0)});return t;
 }
 function despTotalAtual(){
- var t=0; despItens().forEach(function(i){ t+=(i.v||0) });
- return t;
+ var h=despMesRefFechado();if(h)return Number(h.all)||((Number(h.paid)||0)+(Number(h.pend)||0));
+ var t=0;despItens().forEach(function(i){t+=(i.v||0)});return t;
 }
 function despPendentes(){
+ if(despMesRefFechado())return []; /* mês já fechado em Despesas: não há vencimento aberto nele */
  return despItens().filter(function(i){return i.s!=='paid'});
 }
 function normDescDesp(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ')}
@@ -472,8 +525,8 @@ function valorDespProjetado(i){
  return ultimoValorDesp(i);
 }
 function despesasEstimadas(){return despItens().filter(function(i){return i.s!=='paid'&&(i.v||0)===0&&valorDespProjetado(i)!==0})}
-function despTotalProjetadoAtual(){var t=0;despItens().forEach(function(i){t+=valorDespProjetado(i)});return t}
-function despFechadosNovos(){ /* nada do histórico entra: o mês corrente é o das Despesas em aberto */
+function despTotalProjetadoAtual(){var h=despMesRefFechado();if(h)return Number(h.paid)||0;var t=0;despItens().forEach(function(i){t+=valorDespProjetado(i)});return t}
+function despFechadosNovos(){ /* despPagoAtual já escolhe a fonte correta: mês aberto ou histórico fechado */
  return [];
 }
 /* ---------- SALDO ---------- */
@@ -890,7 +943,7 @@ function viewSaldo(){
 }
 function viewMes(){
  var h=fonteAviso();
- var mesAtual=(DESP&&DESP.month)||mesRef().label;
+ var mesAtual=mesRef().label;
  var ganhoAtual=entradas(), despAtual=saidas(), resAtual=ganhoAtual-despAtual, margemAtual=margemPct(ganhoAtual,despAtual);
  var ganhoPrev=ganhoProjetadoMes(), despPrev=despesasProjetadasMes(), resPrev=ganhoPrev-despPrev, margemPrev=margemPct(ganhoPrev,despPrev);
  h+='<section class="hero '+(resAtual<0?'negative':'positive')+'">'
@@ -928,11 +981,12 @@ function viewMes(){
   meses.forEach(function(m){
    var rr=m.ganho-m.desp, mm=margemPct(m.ganho,m.desp);
    h+='<div class="monthEntry"><div class="monthTop"><div class="monthName">'+esc(m.mes)
-    +(m.andamento?' <span class="chip g">em andamento</span>':'')+(m.manual?' <span class="chip a">manual</span>':'')+'</div>'
+    +(m.andamento?' <span class="chip g">em andamento</span>':'')+(m.aguardaSemanal?' <span class="chip a">aguardando semanal</span>':'')+(m.manual?' <span class="chip a">manual</span>':'')+'</div>'
     +'<div class="monthResult '+(rr<0?'r':'g')+'">'+fmt(rr)+'</div></div>'
     +'<div class="monthMeta">Ganhos '+fmt(m.ganho)+' · Despesas '+fmt(m.desp)+' · Margem '+fmtPct(mm)
     +(m.semanas?' · '+m.semanas+' semana'+(m.semanas>1?'s':''):'')
-    +(m.andamento&&typeof m.projGanho==='number'?' · Prev. '+fmt(m.projGanho-m.projDesp)+' · margem prev. '+fmtPct(margemPct(m.projGanho,m.projDesp)):'')
+    +((m.andamento||m.aguardaSemanal)&&typeof m.projGanho==='number'?' · Prev. '+fmt(m.projGanho-m.projDesp)+' · margem prev. '+fmtPct(margemPct(m.projGanho,m.projDesp)):'')
+    +(m.aguardaSemanal?' · fecha de vez após a última semana que toca este mês':'')
     +(m.manual?' · <button class="mv" onclick="openMes(\''+m.mid+'\')">editar</button>':'')+'</div></div>';
   });
   h+='<button class="addLine" onclick="openMes(null)">+ Lançar mês antigo à mão</button></section>';
@@ -951,53 +1005,77 @@ function montaMeses(){
  var mapa={};
  function add(k,g,dsp,sem){
   if(!mapa[k])mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
-  mapa[k].ganho+=g; mapa[k].desp+=dsp; mapa[k].semanas+=sem;
+  mapa[k].ganho+=g;mapa[k].desp+=dsp;mapa[k].semanas+=sem;
  }
- /* histórico real do Semanal: cada centavo é distribuído pelos 7 dias e somado ao mês correto */
- if(SEM) toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){
-  if(!w||!semanaDepoisDoInicio(w)) return;
+ /* Semanas já fechadas: rateio real por dia. */
+ if(SEM)toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){
+  if(!w||!semanaDepoisDoInicio(w))return;
   var cont=rateioSemanaPorMeses(w);
   Object.keys(cont).forEach(function(k){if(mesDepoisDoInicio(k))add(k,cont[k],0,1)});
  });
- /* histórico de Despesas: resultado histórico continua seguindo o que foi efetivamente pago */
- if(DESP) toArr(DESP.history).filter(function(m){return m&&!m.del}).forEach(function(m){
-  var k=String((m&&m.month)||'').toUpperCase(); if(!k) return;
+ /* Semana ainda aberta também pertence ao resultado mensal. Antes ela sumia do mês assim que
+    Despesas era fechado e avançava de competência. Aqui entra somente o RECEBIDO no realizado;
+    quando o Semanal fechar, o histórico substitui naturalmente esta parcela sem duplicar. */
+ if(SEM){
+  var pa=periodoAberto(),rec=semRecebidoAtual();
+  if(pa&&rec){
+   var aberto=rateioPeriodoPorMeses(rec,pa);
+   Object.keys(aberto).forEach(function(k){if(mesDepoisDoInicio(k)){add(k,aberto[k],0,1);mapa[k].semanaAberta=true}});
+  }
+ }
+ /* Despesas fechadas: cada competência usa o total efetivamente pago daquele histórico. */
+ if(DESP)toArr(DESP.history).filter(function(m){return m&&!m.del}).forEach(function(m){
+  var k=String((m&&m.month)||'').toUpperCase();if(!k)return;
   add(k,0,(m.paid||0),0);
  });
+ /* Se Despesas ainda NÃO fechou uma competência que já começou, mantenha o pago atual visível.
+    Não cria setembro antecipadamente em 31/08 só porque o fechamento de agosto já avançou o app. */
+ if(DESP){
+  var kd=String(DESP.month||'').toUpperCase(),krCal=mesRef().label;
+  if(kd&&mesDepoisDoInicio(kd)&&ordemMes(kd)<=ordemMes(krCal)&&!histDespMes(kd)){
+   var pd=0;toArr(DESP.items).filter(function(i){return i&&!i.del&&(!i.mes||String(i.mes).toUpperCase()===kd)}).forEach(function(i){if(i.s==='paid')pd+=(i.v||0)});
+   add(kd,0,pd,0);mapa[kd].despAberta=true;
+  }
+ }
  var auto=Object.keys(mapa).filter(mesDepoisDoInicio);
  manuais().forEach(function(m){
-  if(!m||!m.mes) return;
+  if(!m||!m.mes)return;
   var k=String(m.mes).toUpperCase();
-  if(!mapa[k]) mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
-  mapa[k].ganho+=(m.ganho||0); mapa[k].desp+=(m.desp||0); mapa[k].manual=true; mapa[k].mid=m.id;
-  if(auto.indexOf(k)<0) auto.push(k);
+  if(!mapa[k])mapa[k]={mes:k,ganho:0,desp:0,semanas:0};
+  mapa[k].ganho+=(m.ganho||0);mapa[k].desp+=(m.desp||0);mapa[k].manual=true;mapa[k].mid=m.id;
+  if(auto.indexOf(k)<0)auto.push(k);
  });
- /* mês corrente: mostra realizado, mas carrega também a previsão final sem misturar os dois números */
+ /* Meses anteriores ainda tocados por semana(s) não fechada(s) permanecem PROVISÓRIOS.
+    O realizado mostra apenas o que já foi recebido; a previsão usa: fechada=real, aberta=pago+pendente,
+    ainda não aberta=média. Ex.: em 01/09, AGOSTO continua 'aguardando semanal' até 27/08→02/09 fechar. */
  var kr=mesRef().label;
- if(mesDepoisDoInicio(kr)){
-  if(!mapa[kr]) mapa[kr]={mes:kr,ganho:0,desp:0,semanas:0};
-  var jaFechado=false;
-  if(DESP) toArr(DESP.history).filter(function(m){return m&&!m.del}).forEach(function(m){
-   if(String((m&&m.month)||'').toUpperCase()===kr) jaFechado=true;
-  });
-  if(!jaFechado){
-   var extraM=0,extraD=0;
-   manuais().forEach(function(m){
-    if(m&&String(m.mes||'').toUpperCase()===kr){extraM+=(m.ganho||0);extraD+=(m.desp||0)}
-   });
-   mapa[kr].ganho=entradas()+extraM;
-   mapa[kr].desp=saidas()+extraD;
-   mapa[kr].projGanho=ganhoProjetadoMes()+extraM;
-   mapa[kr].projDesp=despesasProjetadasMes()+extraD;
-   mapa[kr].andamento=true;
+ Object.keys(mapa).forEach(function(k){
+  if(!mesDepoisDoInicio(k)||ordemMes(k)>=ordemMes(kr))return;
+  if(competenciaSemanalPendente(k)){
+   var extraAnt=0;manuais().forEach(function(m){if(m&&String(m.mes||'').toUpperCase()===k)extraAnt+=(m.ganho||0)});
+   mapa[k].aguardaSemanal=true;
+   mapa[k].projGanho=ganhoProjetadoCompetencia(k)+extraAnt;
+   mapa[k].projDesp=mapa[k].desp;
   }
-  if(auto.indexOf(kr)<0) auto.push(kr);
+ });
+ /* O mês em andamento é sempre o MÊS CIVIL. Na virada, SETEMBRO pode assumir o topo no dia 01,
+    enquanto AGOSTO continua abaixo como provisório até a semana que o atravessa ser fechada. */
+ if(mesDepoisDoInicio(kr)){
+  if(!mapa[kr])mapa[kr]={mes:kr,ganho:0,desp:0,semanas:0};
+  var extraM=0,extraD=0;
+  manuais().forEach(function(m){if(m&&String(m.mes||'').toUpperCase()===kr){extraM+=(m.ganho||0);extraD+=(m.desp||0)}});
+  mapa[kr].ganho=entradas()+extraM;
+  mapa[kr].desp=saidas()+extraD;
+  mapa[kr].projGanho=ganhoProjetadoMes()+extraM;
+  mapa[kr].projDesp=despesasProjetadasMes()+extraD;
+  mapa[kr].andamento=true;
+  if(auto.indexOf(kr)<0)auto.push(kr);
  }
  var arr=auto.map(function(k){return mapa[k]});
  arr.sort(function(a,b){
   var pa=a.mes.split('/'),pb=b.mes.split('/');
   var ya=parseInt(pa[1],10)||0,yb=parseInt(pb[1],10)||0;
-  if(ya!==yb) return yb-ya;
+  if(ya!==yb)return yb-ya;
   return MESES.indexOf(pb[0])-MESES.indexOf(pa[0]);
  });
  return arr;
