@@ -247,7 +247,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=34; var APP_DATE='31/08/2026';
+var APP_VER=35; var APP_DATE='02/09/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1122,15 +1122,26 @@ function viewPatr(){
  if(GEST){
   var tm=0;meus.forEach(function(c){tm+=Math.round((c.valorRef||0)*100)});
   h+='<details class="detailsCard"><summary>Frota Hudson · fora do patrimônio do Fábio</summary><div class="detailsBody">';
+  var sfh=meus.filter(function(c){return !(c.valorRef>0)});
+  if(sfh.length) h+='<div class="sourceWarning">'+sfh.length+' carro'+(sfh.length>1?'s':'')+' da frota Hudson sem valor FIPE no Gestão ('+sfh.map(function(c){return esc(c.placa)}).join(', ')+'). Preencha lá para acompanhar valor e variação.</div>';
   if(!meus.length) h+='<div class="empty">Nenhum carro na frota Hudson.</div>';
   else{
    meus.forEach(function(c){
-    h+='<div class="vehicleRow"><div class="vehicleName">'+esc(c.placa||'')+' · '+esc(c.nome||'')+'</div>'
+    var vrh=variacao(c);
+    h+='<div class="vehicleRow"><div><div class="vehicleName">'+esc(c.placa||'')+' · '+esc(c.nome||c.modeloCRLV||'')+'</div>'
+     +(vrh?'<div class="varq '+(vrh.pct<0?'down':'up')+'">'+(vrh.pct<0?'▼':'▲')+' '+Math.abs(vrh.pct).toFixed(1).replace('.',',')+'% · '+fmt(Math.abs(vrh.dif))+' vs '+esc(vrh.de)+'</div>':'')+'</div>'
      +'<div><div class="vehicleValue">'+fmt(Math.round((c.valorRef||0)*100))+'</div><div class="vehicleActions"><button class="mv" onclick="toggleMeu(\''+esc(c.placa)+'\')">Mover ↔</button></div></div></div>';
    });
+   var somaAntH=0,comVarH=0;
+   meus.forEach(function(c){var r=snap()[norPlaca(c.placa)];if(r&&r.antV){somaAntH+=r.antV;comVarH++}});
    h+='<div class="totalRow"><span>'+meus.length+' carro'+(meus.length>1?'s':'')+'</span><span class="value">'+fmt(tm)+'</span></div>';
+   if(comVarH){
+    var difTH=0;meus.forEach(function(c){var v=variacao(c);if(v)difTH+=v.dif});
+    var pctTH=somaAntH?((difTH/somaAntH)*100):0;
+    h+='<div class="sectionIntro" style="margin-top:9px">Desde a tabela anterior: <span class="varq '+(difTH<0?'down':'up')+'">'+(difTH<0?'▼':'▲')+' '+Math.abs(pctTH).toFixed(1).replace('.',',')+'% · '+fmt(Math.abs(difTH))+'</span> em '+comVarH+' carro'+(comVarH>1?'s':'')+'.</div>';
+   }else h+='<div class="sectionIntro" style="margin-top:9px">A variação aparece após uma nova atualização da FIPE no Gestão.</div>';
   }
-  h+='<div class="sectionIntro" style="margin-top:9px">Use “Mover ↔” para trocar um carro entre as duas frotas.</div></div></details>';
+  h+='<div class="sectionIntro" style="margin-top:9px">FIPE automática vinda do Gestão. Use “Mover ↔” para trocar um carro entre as duas frotas.</div></div></details>';
  }
  return h;
 }
