@@ -164,6 +164,9 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
     <button class="close" onclick="document.getElementById('ovSync').classList.remove('open')">✕</button>
     <h3>Sincronização</h3>
     <div class="askMsg" id="syncStatusMsg"></div>
+    <div class="askMsg" id="syncTestStatus" style="font-weight:700;margin-top:8px">Teste entre aparelhos: pronto para executar.</div>
+    <button class="btn primary" style="width:100%;margin:8px 0 4px" onclick="testarNuvemNesteIphone()">☁️ Testar nuvem neste iPhone</button>
+    <button class="btn ghost" style="width:100%;margin:4px 0" onclick="enviarTesteSyncSeguro()">🧪 Testar ida e volta entre iPhones</button>
     <div class="lbl">Configuração do Firebase</div>
     <textarea class="field" id="syncCfgInput" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
     <div class="lbl">Chave da família (a mesma dos outros apps)</div>
@@ -247,7 +250,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=35; var APP_DATE='02/09/2026';
+var APP_VER=36; var APP_DATE='09/09/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1245,13 +1248,16 @@ function _rMeusArray(mm){return Object.keys(mm||{}).filter(function(p){return mm
 
 /* ================= SINCRONIZAÇÃO ================= */
 var DEV=(function(){try{var d=localStorage.getItem('guimas_dev');if(!d){d=uid()+uid();localStorage.setItem('guimas_dev',d)}return d}catch(e){return uid()}})();
-var SYNC={ref:null,online:false,pendingPush:false,pushTimer:null,started:false,gotRemote:false,temSync:false,lastToastAt:0,pendingRemote:null,renderPending:false};
+var SYNC={ref:null,connRef:null,probeRef:null,semRef:null,despRef:null,gestRef:null,online:false,pendingPush:false,pushTimer:null,retryTimer:null,started:false,starting:false,gotRemote:false,temSync:false,lastToastAt:0,pendingRemote:null,renderPending:false,remoteLast:null,localDirty:false,pushInFlight:false,pushToken:0,pushWatch:null};
+var RDIRTY_KEY='guimas_resultados_dirty_v36';try{SYNC.localDirty=localStorage.getItem(RDIRTY_KEY)==='1'}catch(e){}
 function _rCanonSync(x,root){if(Array.isArray(x)){var a=x.map(function(v){return _rCanonSync(v,false)});a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(root&&(k==='rev'||k==='dev'))return;o[k]=_rCanonSync(x[k],false)});return o}return x}
 function _rSyncSig(x){return JSON.stringify(_rCanonSync(x||{},true))}
 function _rSyncIgual(a,b){return _rSyncSig(a)===_rSyncSig(b)}
-function _rCanonBusiness(x,root){if(Array.isArray(x)){var a=x.map(function(v){return _rCanonBusiness(v,false)});a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(k==='at'||k==='by'||(root&&(k==='rev'||k==='dev'||k==='meta')))return;o[k]=_rCanonBusiness(x[k],false)});return o}return x}
+function _rCanonBusiness(x,root){if(Array.isArray(x)){var a=x.map(function(v){return _rCanonBusiness(v,false)});a.sort(function(u,v){var A=JSON.stringify(u),B=JSON.stringify(v);return A<B?-1:(A>B?1:0)});return a}if(x&&typeof x==='object'){var o={};Object.keys(x).sort().forEach(function(k){if(k==='at'||k==='by'||(root&&(k==='rev'||k==='dev'||k==='meta')))return;var v=_rCanonBusiness(x[k],false);if(Array.isArray(v)&&v.length===0)return;if(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===0)return;o[k]=v});return o}return x}
 function _rBusinessSig(x){return JSON.stringify(_rCanonBusiness(x||{},true))}
 function _rBusinessIgual(a,b){return _rBusinessSig(a)===_rBusinessSig(b)}
+function _rSetDirty(v){SYNC.localDirty=!!v;try{localStorage.setItem(RDIRTY_KEY,v?'1':'0')}catch(e){}_rRefreshPill()}
+function _rRefreshPill(){if(!SYNC.ref){setPill('','⚪ sem sync');return}if(!SYNC.online){setPill('wait','🟡 offline — na fila');return}var igual=!!(SYNC.remoteLast&&_rBusinessIgual(state,SYNC.remoteLast));if(SYNC.pushInFlight){setPill('wait','🟡 enviando…');return}if(SYNC.localDirty||SYNC.pendingPush||!igual){setPill('wait','🟡 sincronizando…');return}setPill('on','🟢 sincronizado')}
 function inputFocused(){var a=document.activeElement;return !!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))}
 function _rRenderSeguro(){if(inputFocused()){SYNC.renderPending=true;return}SYNC.renderPending=false;render()}
 setInterval(function(){if(SYNC.renderPending&&!inputFocused())_rRenderSeguro();if(SYNC.pendingRemote&&!inputFocused()){var x=SYNC.pendingRemote;SYNC.pendingRemote=null;_rAdoptRemote(x)}},700);
@@ -1261,123 +1267,41 @@ var BENS_GUARD=KEY+'_bens_guard';
 function guardarBens(){try{localStorage.setItem(BENS_GUARD,JSON.stringify(toArr(state&&state.bens)))}catch(e){}}
 function lerBensGuard(){try{return toArr(JSON.parse(localStorage.getItem(BENS_GUARD)||'[]'))}catch(e){return []}}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));guardarBens()}catch(e){}}
-function save(){touch();persist();schedulePush()}
+function save(){touch();persist();_rSetDirty(true);schedulePush()}
 function agora(){return Date.now()}
 function mesclarLista(rem,loc){
- /* merge determinístico por id: timestamp vence; no empate, exclusão vence e depois
-    um desempate lexical estável impede os dois iPhones de produzirem ordens/estados diferentes. */
- var mapa={};
- function por(lista){
-  toArr(lista).forEach(function(it){
-   if(!it)return;
-   var k=it.id||('k:'+String(it.mes||it.nome||'').toUpperCase()),ja=mapa[k],at=Number(it.at)||0,jat=Number(ja&&ja.at)||0;
-   if(!ja){mapa[k]=it;return}
-   /* Exclusão confirmada é definitiva: um aparelho offline com cópia ativa não
-      pode ressuscitar bem ou mês manual só porque seu relógio marcou um at maior. */
-   if(!!it.del!==!!ja.del){if(it.del)mapa[k]=it;return}
-   if(at>jat){mapa[k]=it;return}
-   if(at<jat)return;
-   var ib=String(it.by||''),jb=String(ja.by||'');if(ib!==jb){if(ib>jb)mapa[k]=it;return}
-   if(JSON.stringify(it)>JSON.stringify(ja))mapa[k]=it;
-  });
- }
- por(loc);por(rem);
- return Object.keys(mapa).sort().map(function(k){return mapa[k]}).sort(function(a,b){var aa=Number(a&&a.at)||0,bb=Number(b&&b.at)||0;if(aa!==bb)return aa-bb;return String(a&&a.id||'').localeCompare(String(b&&b.id||''))});
+ var mapa={};function por(lista){toArr(lista).forEach(function(it){if(!it)return;var k=it.id||('k:'+String(it.mes||it.nome||'').toUpperCase()),ja=mapa[k],at=Number(it.at)||0,jat=Number(ja&&ja.at)||0;if(!ja){mapa[k]=it;return}if(!!it.del!==!!ja.del){if(it.del)mapa[k]=it;return}if(at>jat){mapa[k]=it;return}if(at<jat)return;var ib=String(it.by||''),jb=String(ja.by||'');if(ib!==jb){if(ib>jb)mapa[k]=it;return}if(JSON.stringify(it)>JSON.stringify(ja))mapa[k]=it})}por(loc);por(rem);return Object.keys(mapa).sort().map(function(k){return mapa[k]}).sort(function(a,b){var aa=Number(a&&a.at)||0,bb=Number(b&&b.at)||0;if(aa!==bb)return aa-bb;return String(a&&a.id||'').localeCompare(String(b&&b.id||''))})
 }
 function mesclar(remoto,local){
- var rawR=remoto&&typeof remoto==='object'?remoto:{},rawL=local&&typeof local==='object'?local:{},nativeR=!!rawR.meusMeta,nativeL=!!rawL.meusMeta;remoto=norm(rawR);local=norm(rawL);var o={},mr=remoto.meta||{},ml=local.meta||{};o.bens=mesclarLista(remoto.bens,local.bens);o.manuais=mesclarLista(remoto.manuais,local.manuais);
- var mig=[];toArr(remoto.migs).concat(toArr(local.migs)).forEach(function(x){if(x&&mig.indexOf(x)<0)mig.push(x)});mig.sort();o.migs=mig;o.semeado=!!(remoto.semeado||local.semeado);
- var mm={};
- if(!nativeR&&!nativeL){var escolhido=(Number(rawL.rev)||0)>(Number(rawR.rev)||0)?rawL:rawR,lista=toArr(escolhido.meus).map(norPlaca),un={};toArr(rawR.meus).concat(toArr(rawL.meus)).forEach(function(p){p=norPlaca(p);if(p)un[p]=1});Object.keys(un).sort().forEach(function(p){mm[p]={v:lista.indexOf(p)>=0,at:Number(escolhido.rev)||1,by:escolhido.dev||'legacy'}})}
- else{var rm=_rMeusMetaFrom(remoto),lm=_rMeusMetaFrom(local),pk={};Object.keys(rm).concat(Object.keys(lm)).forEach(function(k){pk[k]=1});Object.keys(pk).sort().forEach(function(k){var a=rm[k],b=lm[k];if(!a)mm[k]=b;else if(!b)mm[k]=a;else mm[k]=_rPick(a,b,a,b)})}
- o.meusMeta=mm;o.meus=_rMeusArray(mm);o.media=_rPick(remoto.media,local.media,mr.media,ml.media);o.inicio=_rInicioMaisAntigo(remoto.inicio,local.inicio);o.fipeSnap=_rMergeFipe(remoto.fipeSnap,local.fipeSnap);var za=remoto.zero,zb=local.zero;o.zero=_rPick(za,zb,za&&{at:za.at},zb&&{at:zb.at});o.meta={};['media','inicio','meus','fipeSnap','semeado'].forEach(function(k){var a=mr[k],b=ml[k];o.meta[k]=_rPick(a,b,a,b)||a||b});o.rev=Math.max(Number(remoto.rev)||0,Number(local.rev)||0);o.dev=(Number(local.rev)||0)>(Number(remoto.rev)||0)?local.dev:((Number(local.rev)||0)<(Number(remoto.rev)||0)?remoto.dev:(String(local.dev||'')>String(remoto.dev||'')?local.dev:remoto.dev));return norm(o);
+ var rawR=remoto&&typeof remoto==='object'?remoto:{},rawL=local&&typeof local==='object'?local:{},nativeR=!!rawR.meusMeta,nativeL=!!rawL.meusMeta;remoto=norm(rawR);local=norm(rawL);var o={},mr=remoto.meta||{},ml=local.meta||{};o.bens=mesclarLista(remoto.bens,local.bens);o.manuais=mesclarLista(remoto.manuais,local.manuais);var mig=[];toArr(remoto.migs).concat(toArr(local.migs)).forEach(function(x){if(x&&mig.indexOf(x)<0)mig.push(x)});mig.sort();o.migs=mig;o.semeado=!!(remoto.semeado||local.semeado);var mm={};if(!nativeR&&!nativeL){var escolhido=(Number(rawL.rev)||0)>(Number(rawR.rev)||0)?rawL:rawR,lista=toArr(escolhido.meus).map(norPlaca),un={};toArr(rawR.meus).concat(toArr(rawL.meus)).forEach(function(p){p=norPlaca(p);if(p)un[p]=1});Object.keys(un).sort().forEach(function(p){mm[p]={v:lista.indexOf(p)>=0,at:Number(escolhido.rev)||1,by:escolhido.dev||'legacy'}})}else{var rm=_rMeusMetaFrom(remoto),lm=_rMeusMetaFrom(local),pk={};Object.keys(rm).concat(Object.keys(lm)).forEach(function(k){pk[k]=1});Object.keys(pk).sort().forEach(function(k){var a=rm[k],b=lm[k];if(!a)mm[k]=b;else if(!b)mm[k]=a;else mm[k]=_rPick(a,b,a,b)})}o.meusMeta=mm;o.meus=_rMeusArray(mm);o.media=_rPick(remoto.media,local.media,mr.media,ml.media);o.inicio=_rInicioMaisAntigo(remoto.inicio,local.inicio);o.fipeSnap=_rMergeFipe(remoto.fipeSnap,local.fipeSnap);var za=remoto.zero,zb=local.zero;o.zero=_rPick(za,zb,za&&{at:za.at},zb&&{at:zb.at});o.meta={};['media','inicio','meus','fipeSnap','semeado'].forEach(function(k){var a=mr[k],b=ml[k];o.meta[k]=_rPick(a,b,a,b)||a||b});o.rev=Math.max(Number(remoto.rev)||0,Number(local.rev)||0);o.dev=(Number(local.rev)||0)>(Number(remoto.rev)||0)?local.dev:((Number(local.rev)||0)<(Number(remoto.rev)||0)?remoto.dev:(String(local.dev||'')>String(remoto.dev||'')?local.dev:remoto.dev));return norm(o)
 }
 function norm(s){
- if(!s||typeof s!=='object')s={};var meta=(s.meta&&typeof s.meta==='object')?JSON.parse(JSON.stringify(s.meta)):{},rv=Number(s.rev)||0,by=s.dev||'legacy';
- if(meta.media===undefined&&typeof s.media==='number')meta.media={at:rv||1,by:by};if(meta.inicio===undefined&&s.inicio)meta.inicio={at:rv||1,by:by};if(meta.fipeSnap===undefined&&s.fipeSnap&&Object.keys(s.fipeSnap).length)meta.fipeSnap={at:rv||1,by:by};if(meta.meus===undefined&&s.meus!==undefined)meta.meus={at:rv||1,by:by};
- var rawmm=s.meusMeta&&typeof s.meusMeta==='object'?JSON.parse(JSON.stringify(s.meusMeta)):{};toArr(s.meus).forEach(function(p){p=norPlaca(p);if(p&&!rawmm[p])rawmm[p]={v:true,at:rv||1,by:by}});var mm={};Object.keys(rawmm).sort().forEach(function(k){mm[k]=rawmm[k]});
- var fs=s.fipeSnap&&typeof s.fipeSnap==='object'?s.fipeSnap:{},fipe={};Object.keys(fs).sort().forEach(function(k){fipe[k]=fs[k]});
- var mans=s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,by:m.by||'',del:!!m.del}}).sort(function(a,b){var aa=Number(a.at)||0,bb=Number(b.at)||0;if(aa!==bb)return aa-bb;return String(a.id).localeCompare(String(b.id))});
- var o={rev:rv,dev:s.dev||'',meta:meta,meusMeta:mm,bens:[],meus:_rMeusArray(mm),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),fipeSnap:fipe,manuais:mans,migs:[],semeado:!!s.semeado};
- toArr(s.migs).forEach(function(m){if(m&&o.migs.indexOf(m)<0)o.migs.push(m)});o.migs.sort();if(s.zero&&typeof s.zero==='object')o.zero={at:s.zero.at||0,sem:toArr(s.zero.sem),desp:toArr(s.zero.desp)};toArr(s.bens).forEach(function(b){if(b)o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0),at:b.at||0,by:b.by||'',del:!!b.del})});o.bens.sort(function(a,b){var aa=Number(a.at)||0,bb=Number(b.at)||0;if(aa!==bb)return aa-bb;return String(a.id).localeCompare(String(b.id))});return o;
+ if(!s||typeof s!=='object')s={};var meta=(s.meta&&typeof s.meta==='object')?JSON.parse(JSON.stringify(s.meta)):{},rv=Number(s.rev)||0,by=s.dev||'legacy';if(meta.media===undefined&&typeof s.media==='number')meta.media={at:rv||1,by:by};if(meta.inicio===undefined&&s.inicio)meta.inicio={at:rv||1,by:by};if(meta.fipeSnap===undefined&&s.fipeSnap&&Object.keys(s.fipeSnap).length)meta.fipeSnap={at:rv||1,by:by};if(meta.meus===undefined&&s.meus!==undefined)meta.meus={at:rv||1,by:by};var rawmm=s.meusMeta&&typeof s.meusMeta==='object'?JSON.parse(JSON.stringify(s.meusMeta)):{};toArr(s.meus).forEach(function(p){p=norPlaca(p);if(p&&!rawmm[p])rawmm[p]={v:true,at:rv||1,by:by}});var mm={};Object.keys(rawmm).sort().forEach(function(k){mm[k]=rawmm[k]});var fs=s.fipeSnap&&typeof s.fipeSnap==='object'?s.fipeSnap:{},fipe={};Object.keys(fs).sort().forEach(function(k){fipe[k]=fs[k]});var mans=s.manuais===undefined?null:toArr(s.manuais).map(function(m){return {id:m.id||uid(),mes:m.mes||'',ganho:m.ganho||0,desp:m.desp||0,at:m.at||0,by:m.by||'',del:!!m.del}}).sort(function(a,b){var aa=Number(a.at)||0,bb=Number(b.at)||0;if(aa!==bb)return aa-bb;return String(a.id).localeCompare(String(b.id))});var o={rev:rv,dev:s.dev||'',meta:meta,meusMeta:mm,bens:[],meus:_rMeusArray(mm),media:(typeof s.media==='number'?s.media:null),inicio:(s.inicio||null),fipeSnap:fipe,manuais:mans,migs:[],semeado:!!s.semeado};toArr(s.migs).forEach(function(m){if(m&&o.migs.indexOf(m)<0)o.migs.push(m)});o.migs.sort();if(s.zero&&typeof s.zero==='object')o.zero={at:s.zero.at||0,sem:toArr(s.zero.sem),desp:toArr(s.zero.desp)};toArr(s.bens).forEach(function(b){if(b)o.bens.push({id:b.id||uid(),nome:b.nome||'',v:(typeof b.v==='number'?b.v:0),at:b.at||0,by:b.by||'',del:!!b.del})});o.bens.sort(function(a,b){var aa=Number(a.at)||0,bb=Number(b.at)||0;if(aa!==bb)return aa-bb;return String(a.id).localeCompare(String(b.id))});return o
 }
-function load(){
- try{
-  var r=localStorage.getItem(KEY), o=r?norm(JSON.parse(r)):norm({});
-  var g=lerBensGuard(); if(g.length) o.bens=mesclarLista(o.bens,g);
-  return o;
- }catch(e){return norm({})}
-}
+function load(){try{var r=localStorage.getItem(KEY),o=r?norm(JSON.parse(r)):norm({});var g=lerBensGuard();if(g.length)o.bens=mesclarLista(o.bens,g);return o}catch(e){return norm({})}}
 function syncCfg(){try{return JSON.parse(localStorage.getItem('guimas_consolidado_sync')||'null')}catch(e){return null}}
 function setPill(m,t){var p=document.getElementById('syncPill');p.className='syncpill'+(m?' '+m:'');p.textContent=t}
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 function famHash(key){return crypto.subtle.digest('SHA-256',new TextEncoder().encode('guimas:'+key)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')})}
-function _rAdoptRemote(v){
- var soSemente=!(state.rev>0),remoto=norm(v),antes=norm(state),juntos=soSemente?remoto:norm(mesclar(remoto,antes)),precisaReenviar=!soSemente&&!_rBusinessIgual(juntos,remoto),mudaDados=!_rBusinessIgual(juntos,antes),mudaMeta=!_rSyncIgual(juntos,antes);state=juntos;if(mudaMeta||soSemente)persist();aplicarCorrecoes();if(soSemente||mudaDados)_rRenderSeguro();if(precisaReenviar){touch();persist();schedulePush()}else if(SYNC.pendingPush)push();if(!soSemente&&mudaDados)_rToastSync();
-}
+function _rAdoptRemote(v){var soSemente=!(state.rev>0),remoto=norm(v),antes=norm(state),juntos=soSemente?remoto:norm(mesclar(remoto,antes));SYNC.remoteLast=remoto;var precisaReenviar=!soSemente&&!_rBusinessIgual(juntos,remoto),mudaDados=!_rBusinessIgual(juntos,antes),mudaMeta=!_rSyncIgual(juntos,antes);state=juntos;if(mudaMeta||soSemente)persist();aplicarCorrecoes();if(soSemente||mudaDados)_rRenderSeguro();if(precisaReenviar){touch();persist();SYNC.pendingPush=true;_rSetDirty(true);schedulePush()}else if(_rBusinessIgual(state,remoto)){SYNC.pendingPush=false;_rSetDirty(false)}if(!soSemente&&mudaDados)_rToastSync();_rRefreshPill()}
+function _rScheduleStart(ms){clearTimeout(SYNC.retryTimer);SYNC.retryTimer=setTimeout(startSync,ms||5000)}
 function startSync(){
- var cfg=syncCfg();
- if(!cfg||!cfg.config||!cfg.key){SYNC.temSync=false;setPill('','⚪ sem sync');return}
- SYNC.temSync=true;
- setPill('wait','🟡 conectando…');
- var V='10.14.1',B='https://www.gstatic.com/firebasejs/'+V+'/';
- var chain=Promise.resolve();
- if(typeof firebase==='undefined'){
-  chain=loadScript(B+'firebase-app-compat.js')
-   .then(function(){return loadScript(B+'firebase-auth-compat.js')})
-   .then(function(){return loadScript(B+'firebase-database-compat.js')});
- }
- chain.then(function(){
-  if(!SYNC.started){firebase.initializeApp(cfg.config);SYNC.started=true}
-  return firebase.auth().signInAnonymously();
- }).then(function(){ return famHash(cfg.key) })
- .then(function(h){
-  var db=firebase.database();
-  /* PRÓPRIO — leitura e escrita */
-  SYNC.ref=db.ref('familias/'+h+'/consolidado');
-  SYNC.ref.on('value',function(s){
-   var v=s.val();
-   SYNC.gotRemote=true;
-   if(!v){push();return}
-   /* rev 0 = aparelho recém-instalado: a nuvem é a base. Depois disso, nunca
-      trocamos o estado inteiro: unimos bens/manuais item a item para um aparelho
-      antigo não apagar uma casa ou outro patrimônio cadastrado no outro. */
-   var soSemente=!(state.rev>0);
-   if(!soSemente&&v.dev===DEV){ if(SYNC.pendingPush)push(); return }
-   if(inputFocused()){SYNC.pendingRemote=SYNC.pendingRemote?mesclar(SYNC.pendingRemote,v):v;return}
-   _rAdoptRemote(v);
-  },function(){setPill('wait','🟡 reconectando…');setTimeout(startSync,15000)});
-  /* OUTROS APPS — SOMENTE LEITURA (nunca escrevemos nestes nós) */
-  db.ref('familias/'+h+'/estado').on('value',function(s){_extSet('sem',s.val()||null)},function(){});
-  db.ref('familias/'+h+'/despesas').on('value',function(s){_extSet('desp',s.val()||null)},function(){});
-  db.ref('familias/'+h+'/gestao').on('value',function(s){_extSet('gest',s.val()||null);try{registrarFipe()}catch(e){}},function(){});
-  db.ref('.info/connected').on('value',function(s){
-   SYNC.online=!!s.val();
-   if(!SYNC.online) SYNC.gotRemote=false;
-   setPill(SYNC.online?'on':'wait',SYNC.online?'🟢 sincronizado':'🟡 offline');
-   if(SYNC.online&&SYNC.pendingPush&&SYNC.gotRemote)push();
-  });
- }).catch(function(){setPill('wait','🟡 offline');SYNC.pendingPush=true;setTimeout(startSync,20000)});
+ var cfg=syncCfg();if(!cfg||!cfg.config||!cfg.key){SYNC.temSync=false;setPill('','⚪ sem sync');return}if(SYNC.starting)return;SYNC.temSync=true;SYNC.starting=true;setPill('wait','🟡 conectando…');var V='10.14.1',B='https://www.gstatic.com/firebasejs/'+V+'/',chain=Promise.resolve();if(typeof firebase==='undefined'){chain=loadScript(B+'firebase-app-compat.js').then(function(){return loadScript(B+'firebase-auth-compat.js')}).then(function(){return loadScript(B+'firebase-database-compat.js')})}
+ chain.then(function(){if(!SYNC.started){firebase.initializeApp(cfg.config);SYNC.started=true}return firebase.auth().signInAnonymously()}).then(function(){return famHash(cfg.key)}).then(function(h){var db=firebase.database();['ref','connRef','probeRef','semRef','despRef','gestRef'].forEach(function(k){try{if(SYNC[k])SYNC[k].off()}catch(e){}});SYNC.ref=db.ref('familias/'+h+'/consolidado');SYNC.semRef=db.ref('familias/'+h+'/estado');SYNC.despRef=db.ref('familias/'+h+'/despesas');SYNC.gestRef=db.ref('familias/'+h+'/gestao');SYNC.connRef=db.ref('.info/connected');SYNC.probeRef=db.ref('familias/'+h+'/probeResultadosV36');SYNC.gotRemote=false;SYNC.probeRef.on('value',function(snap){_rOnProbe(snap&&snap.val?snap.val():null)},function(){});SYNC.ref.on('value',function(s){var v=s.val();SYNC.gotRemote=true;if(!v){SYNC.pendingPush=true;_rSetDirty(true);push();return}if(inputFocused()){SYNC.pendingRemote=SYNC.pendingRemote?mesclar(SYNC.pendingRemote,v):v;SYNC.remoteLast=norm(v);_rRefreshPill();return}_rAdoptRemote(v)},function(){SYNC.online=false;SYNC.pendingPush=SYNC.pendingPush||SYNC.localDirty;_rRefreshPill();_rScheduleStart(5000)});SYNC.semRef.on('value',function(s){_extSet('sem',s.val()||null)},function(){});SYNC.despRef.on('value',function(s){_extSet('desp',s.val()||null)},function(){});SYNC.gestRef.on('value',function(s){_extSet('gest',s.val()||null);try{registrarFipe()}catch(e){}},function(){});SYNC.connRef.on('value',function(s){SYNC.online=!!s.val();_rRefreshPill();if(SYNC.online&&(SYNC.pendingPush||SYNC.localDirty)&&SYNC.gotRemote)push()});SYNC.starting=false;clearTimeout(SYNC.retryTimer)}).catch(function(){SYNC.starting=false;SYNC.online=false;SYNC.pendingPush=SYNC.pendingPush||SYNC.localDirty;_rRefreshPill();_rScheduleStart(5000)})
 }
-function push(){
- if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;return} /* espera a primeira leitura */
- if(!SYNC.ref){SYNC.pendingPush=true;return}
- SYNC.pendingPush=false;var local=norm(state);
- /* Transação atômica + no-op real: se a nuvem já contém o mesmo conteúdo, não cria
-    uma nova revisão artificial e não dispara outro ciclo de sincronização. */
- SYNC.ref.transaction(function(cur){
-  var junto=cur?norm(mesclar(cur,local)):norm(local);if(cur&&_rBusinessIgual(junto,cur))return;
-  junto.rev=Math.max(Date.now(),local.rev||0,(cur&&cur.rev)||0);junto.dev=DEV;return junto;
- },function(err,committed,snap){
-  if(err){SYNC.pendingPush=true;return}if(!committed){SYNC.pendingPush=false;return}
-  if(snap&&snap.val()){var remoto=norm(snap.val()),atual=norm(state),junto=norm(mesclar(remoto,atual)),mudaDados=!_rBusinessIgual(junto,atual),mudaMeta=!_rSyncIgual(junto,atual),precisa=!_rBusinessIgual(junto,remoto);if(mudaMeta){state=junto;persist()}if(mudaDados)_rRenderSeguro();if(precisa){touch();persist();schedulePush()}}
- },false);
-}
-function schedulePush(){clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1200)}
+function push(){if(SYNC.pushInFlight)return;if(SYNC.temSync&&!SYNC.gotRemote){SYNC.pendingPush=true;_rRefreshPill();return}if(!SYNC.ref||!SYNC.online){SYNC.pendingPush=true;_rRefreshPill();return}SYNC.pushInFlight=true;SYNC.pendingPush=false;_rRefreshPill();var local=norm(JSON.parse(JSON.stringify(state))),token=++SYNC.pushToken,finished=false;clearTimeout(SYNC.pushWatch);SYNC.pushWatch=setTimeout(function(){if(finished||token!==SYNC.pushToken)return;finished=true;SYNC.pushInFlight=false;SYNC.pendingPush=true;_rSetDirty(true);_rRefreshPill();clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1200)},8000);try{SYNC.ref.transaction(function(cur){var junto=cur?norm(mesclar(cur,local)):norm(local);if(cur&&_rBusinessIgual(junto,norm(cur)))return;junto.rev=Math.max(Date.now(),local.rev||0,(cur&&cur.rev)||0);junto.dev=DEV;return junto},function(err,committed,snap){if(finished||token!==SYNC.pushToken)return;finished=true;clearTimeout(SYNC.pushWatch);SYNC.pushInFlight=false;if(err){SYNC.pendingPush=true;_rSetDirty(true);_rRefreshPill();clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1500);return}if(snap&&snap.val())SYNC.remoteLast=norm(snap.val());if(!committed){if(SYNC.remoteLast&&_rBusinessIgual(state,SYNC.remoteLast)){SYNC.pendingPush=false;_rSetDirty(false)}else{SYNC.pendingPush=true;_rSetDirty(true);clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1000)}_rRefreshPill();return}if(SYNC.remoteLast){var remoto=SYNC.remoteLast,atual=norm(state),junto=norm(mesclar(remoto,atual)),mudaDados=!_rBusinessIgual(junto,atual),mudaMeta=!_rSyncIgual(junto,atual),precisa=!_rBusinessIgual(junto,remoto);if(mudaMeta){state=junto;persist()}if(mudaDados)_rRenderSeguro();if(precisa){state=junto;touch();persist();SYNC.pendingPush=true;_rSetDirty(true);schedulePush()}else if(_rBusinessIgual(state,remoto)){SYNC.pendingPush=false;_rSetDirty(false)}}_rRefreshPill()},false)}catch(e){finished=true;clearTimeout(SYNC.pushWatch);SYNC.pushInFlight=false;SYNC.pendingPush=true;_rSetDirty(true);_rRefreshPill();clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,1500)}}
+function schedulePush(){SYNC.pendingPush=true;_rSetDirty(true);clearTimeout(SYNC.pushTimer);SYNC.pushTimer=setTimeout(push,120)}
+setInterval(function(){if(SYNC.online&&SYNC.ref&&SYNC.gotRemote&&(SYNC.localDirty||SYNC.pendingPush)){clearTimeout(SYNC.pushTimer);push()}},5000);
+function _rResyncAgora(){if(!SYNC.ref)return;try{firebase.database().goOnline()}catch(e){}try{Promise.all([SYNC.ref.once('value'),SYNC.semRef?SYNC.semRef.once('value'):Promise.resolve(null),SYNC.despRef?SYNC.despRef.once('value'):Promise.resolve(null),SYNC.gestRef?SYNC.gestRef.once('value'):Promise.resolve(null)]).then(function(a){if(a[0]&&a[0].val())_rAdoptRemote(a[0].val());if(a[1])_extSet('sem',a[1].val()||null);if(a[2])_extSet('desp',a[2].val()||null);if(a[3]){_extSet('gest',a[3].val()||null);try{registrarFipe()}catch(e){}}if(SYNC.localDirty||SYNC.pendingPush)push()}).catch(function(){_rScheduleStart(2500)})}catch(e){}}
+try{window.addEventListener('pagehide',function(){try{persist()}catch(e){};if(SYNC.ref&&SYNC.gotRemote){try{clearTimeout(SYNC.pushTimer);push()}catch(e){}}});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){try{persist()}catch(e){};if(SYNC.ref&&SYNC.gotRemote){try{clearTimeout(SYNC.pushTimer);push()}catch(e){}}}else setTimeout(_rResyncAgora,250)});window.addEventListener('pageshow',function(){setTimeout(_rResyncAgora,250)});window.addEventListener('online',function(){setTimeout(_rResyncAgora,100)});window.addEventListener('focus',function(){setTimeout(_rResyncAgora,250)})}catch(e){}
+setInterval(function(){if(document.visibilityState==='visible'&&SYNC.online)_rResyncAgora()},30000);
+var RPROBE_SENT='guimas_resultados_probe_sent_v36';function _rProbeStatus(t){try{var e=document.getElementById('syncTestStatus');if(e)e.textContent=t}catch(x){}}function _rOnProbe(p){SYNC.probeLast=(p&&typeof p==='object')?p:null;if(!p||!p.id)return;var sent='';try{sent=localStorage.getItem(RPROBE_SENT)||''}catch(e){}if(p.from===DEV&&p.id===sent&&p.ackBy&&p.ackBy!==DEV){_rProbeStatus('✅ TESTE COMPLETO: ida e volta confirmadas entre os dois iPhones.');toast('✅ Sincronização de ida e volta confirmada');return}if(p.from!==DEV&&!p.ackBy&&SYNC.probeRef){var id=String(p.id);SYNC.probeRef.transaction(function(cur){if(!cur||String(cur.id||'')!==id||cur.ackBy)return;cur.ackBy=DEV;cur.ackAt=Date.now();return cur},function(err,committed){if(!err&&committed)_rProbeStatus('✅ Teste recebido. Resposta automática enviada ao outro iPhone.')},false)}}function testarNuvemNesteIphone(){if(!SYNC.ref||!SYNC.online||!SYNC.gotRemote){toast('⚠️ Aguarde a conexão com a nuvem');return}var id='ackres36_'+DEV.slice(0,6)+'_'+Date.now(),r;try{r=SYNC.ref.parent.child('probeResultadosAckV36/'+DEV.slice(0,12))}catch(e){_rProbeStatus('❌ Não consegui abrir o nó técnico');return}_rProbeStatus('Testando escrita e leitura da nuvem neste iPhone…');var fim=false,t=setTimeout(function(){if(fim)return;fim=true;_rProbeStatus('❌ Teste sem confirmação após 8 segundos')},8000);r.set({id:id,from:DEV,at:Date.now()}).then(function(){return r.once('value')}).then(function(s){if(fim)return;fim=true;clearTimeout(t);var v=s.val();_rProbeStatus(v&&v.id===id?'✅ NUVEM CONFIRMADA: escrita + leitura + ACK funcionando neste iPhone.':'❌ A leitura voltou diferente do que foi gravado')}).catch(function(){if(fim)return;fim=true;clearTimeout(t);_rProbeStatus('❌ Falha no teste da nuvem')})}
+function enviarTesteSyncSeguro(){if(!SYNC.ref||!SYNC.probeRef||!SYNC.online||!SYNC.gotRemote){toast('⚠️ Aguarde a conexão com a nuvem');return}if(SYNC.localDirty||SYNC.pendingPush||SYNC.pushInFlight||!SYNC.remoteLast||!_rBusinessIgual(state,SYNC.remoteLast)){toast('⚠️ Aguarde ficar 🟢 sincronizado antes do teste');return}var id='res36_'+DEV.slice(0,6)+'_'+Date.now(),payload={id:id,from:DEV,createdAt:Date.now()};try{localStorage.setItem(RPROBE_SENT,id)}catch(e){}_rProbeStatus('Teste enviado. Aguardando o outro iPhone receber e responder automaticamente…');try{SYNC.probeRef.set(payload,function(err){if(err)_rProbeStatus('❌ Falha ao enviar o teste')})}catch(e){_rProbeStatus('❌ Falha ao iniciar o teste')}}
 function openSync(){
  var cfg=syncCfg();
+ var igual=SYNC.remoteLast&&_rBusinessIgual(state,SYNC.remoteLast);
  document.getElementById('syncStatusMsg').textContent=cfg&&cfg.config
-  ?(SYNC.online?'Conectado. Este app apenas LÊ o Semanal, as Despesas e o Gestão.':'Configurado, aguardando conexão.')
+  ?(SYNC.online&&igual&&!SYNC.localDirty&&!SYNC.pendingPush&&!SYNC.pushInFlight?'Confirmado: o estado próprio do Resultados está igual à nuvem; Semanal, Despesas e Gestão continuam somente leitura.':(SYNC.online?'Conectado, mas ainda há conteúdo próprio aguardando confirmação da nuvem.':'Offline: alterações próprias permanecem na fila persistente e serão reenviadas ao reconectar.'))
   :'Cole a configuração do Firebase e a mesma chave da família usada nos outros apps.';
  if(cfg){document.getElementById('syncCfgInput').value=JSON.stringify(cfg.config,null,1);document.getElementById('syncKeyInput').value=cfg.key||''}
  document.getElementById('ovSync').classList.add('open');
@@ -1394,10 +1318,10 @@ function saveSyncSetup(){
   toast('Sincronização configurada ✓'); startSync();
  }catch(e){toast('⚠️ Configuração inválida — cole o bloco inteiro com { }')}
 }
-function disableSync(){localStorage.removeItem('guimas_consolidado_sync');SYNC.ref=null;SYNC.started=false;document.getElementById('ovSync').classList.remove('open');setPill('','⚪ sem sync');toast('Sincronização desativada')}
+function disableSync(){localStorage.removeItem('guimas_consolidado_sync');['ref','connRef','probeRef','semRef','despRef','gestRef'].forEach(function(k){try{if(SYNC[k])SYNC[k].off()}catch(e){}});SYNC.ref=null;SYNC.connRef=null;SYNC.probeRef=null;SYNC.semRef=null;SYNC.despRef=null;SYNC.gestRef=null;SYNC.online=false;SYNC.gotRemote=false;SYNC.remoteLast=null;document.getElementById('ovSync').classList.remove('open');setPill('','⚪ sem sync');toast('Sincronização desativada')}
 
 /* ---------- auto-atualização ---------- */
-function safeToReload(){try{var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return false;var o=document.querySelectorAll?document.querySelectorAll('.overlay.open'):[];if(o&&o.length)return false}catch(e){}return true}
+function safeToReload(){try{if(typeof SYNC!=='undefined'&&SYNC&&SYNC.pushInFlight)return false;var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))return false;var o=document.querySelectorAll?document.querySelectorAll('.overlay.open'):[];if(o&&o.length)return false}catch(e){}return true}
 var _updFound=false;
 function _updNavigate(nv){
  try{
