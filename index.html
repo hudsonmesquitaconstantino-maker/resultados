@@ -129,13 +129,104 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 .sheet{border-radius:22px 22px 0 0;padding:11px 15px calc(17px + env(safe-area-inset-bottom))}.sheet h3{font-size:19px}.askMsg{font-size:12px}.field,textarea.field{font-size:14px;padding:11px}.menu button{font-size:13px;padding:12px}
 @media(max-width:390px){header{padding-left:11px;padding-right:11px}.htitle{font-size:22px}.syncpill{padding:0 8px}.heroValue,.heroValue.big{font-size:28px}.heroStats,.monthGrid{gap:4px}.heroStat,.metric{padding:7px 6px}.heroStat .v{font-size:11px}.metric .v{font-size:10.5px}main{padding-left:9px;padding-right:9px}.card,.sectionCard{padding:12px}.hero{padding:13px}.patrGrid .metric .v{font-size:13px}}
 
+/* ===== v37 · NOVA INTERFACE (mesmas contas; menos texto; resumo antes do detalhe) =====
+   Regras: um número grande por tela; cor só para ganho (verde) e prejuízo (vermelho);
+   explicação das contas fica num “Como calculei” fechado; ação principal embaixo. */
+header{padding:calc(6px + env(safe-area-inset-top)) 16px 8px!important}
+header .tabs,#verTag{display:none!important}
+.eyebrow{display:none}
+.htitle{font-size:17px!important;letter-spacing:-.3px!important;font-weight:700!important}
+body{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+main{padding:6px 16px 8px!important;max-width:640px}
+.r2nav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border-top:.5px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.r2nav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font:600 11px -apple-system,system-ui,sans-serif;color:#8A9098;min-height:48px;padding:4px 0;cursor:pointer}
+.r2nav svg{width:24px;height:24px}
+.r2nav button.on{color:var(--blue)}
+.r2head{margin:10px 2px 14px}
+.r2eyebrow{font-size:14px;color:var(--muted);font-weight:500}
+.r2titulo{font-size:28px;font-weight:800;letter-spacing:-.7px;line-height:1.15;color:var(--ink)}
+.r2prog{height:4px;border-radius:2px;background:#E4E7EB;margin-top:10px;overflow:hidden}
+.r2prog i{display:block;height:100%;background:var(--blue);border-radius:2px}
+.r2card{background:var(--surface);border-radius:18px;padding:16px;margin:0 0 12px;box-shadow:0 1px 2px rgba(20,30,45,.05)}
+.r2lbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7F858E;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.r2lbl span+span{text-transform:none;letter-spacing:0;font-weight:600}
+.r2big{font-size:36px;font-weight:800;letter-spacing:-1.2px;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--ink)}
+.r2big.g{color:var(--green)}.r2big.r{color:var(--red)}
+.r2mid{font-size:24px;font-weight:780;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.r2mid.g{color:var(--green)}.r2mid.r{color:var(--red)}
+.r2sub{font-size:14px;color:var(--muted);line-height:1.45;margin-top:6px}
+.r2sub b{color:var(--ink);font-weight:650}
+.r2bars{display:grid;gap:10px;margin-top:16px}
+.r2bar{display:grid;gap:5px}
+.r2barT{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.r2barT b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.r2barL{height:8px;border-radius:4px;background:#EEF0F3;overflow:hidden}
+.r2barL i{display:block;height:100%;border-radius:4px}
+.r2bg{background:var(--green)}.r2br{background:var(--red)}.r2bn{background:var(--blue)}
+.r2row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:.5px solid var(--line);min-height:52px}
+.r2row:last-child{border-bottom:0}
+.r2row.tap{cursor:pointer}
+.r2rowT{font-size:16px;font-weight:600;color:var(--ink);line-height:1.3;min-width:0}
+.r2rowS{font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}
+.r2val{font-size:16px;font-weight:750;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.r2val.g{color:var(--green)}.r2val.r{color:var(--red)}
+.r2val small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.r2dia{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:.5px solid var(--line)}
+.r2dia:last-child{border-bottom:0}
+.r2dia .d{width:44px;height:44px;border-radius:12px;background:#F0F2F5;display:grid;place-items:center;font-weight:800;font-size:16px;color:#4B525B;line-height:1}
+.r2dia .d small{display:block;font-size:9px;font-weight:700;color:#8A9098;letter-spacing:.04em}
+.r2dia.neg .d{background:var(--red-bg);color:var(--red)}
+.r2alerta{border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;margin:0 0 10px}
+.r2alerta.bad{background:var(--red-bg);color:#9E3E3B}
+.r2alerta.ok{background:var(--green-bg);color:#2F6E4B}
+.r2chip{display:inline-block;font-size:12px;font-weight:650;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px;background:#EEF0F3;color:#6A717A}
+.r2chip.a{background:var(--amber-bg);color:var(--amber)}.r2chip.g{background:var(--green-bg);color:var(--green)}
+.r2link{border:0;background:none;color:var(--blue);font:600 15px -apple-system,system-ui,sans-serif;padding:10px 0 2px;cursor:pointer}
+.r2btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:50px;border-radius:14px;border:0;background:var(--blue);color:#fff;font:650 16px -apple-system,system-ui,sans-serif;cursor:pointer;margin:4px 0 12px}
+.r2btn.sec{background:var(--surface);color:var(--blue);box-shadow:0 1px 2px rgba(20,30,45,.06)}
+.r2det{background:var(--surface);border-radius:18px;margin:0 0 12px;box-shadow:0 1px 2px rgba(20,30,45,.05);overflow:hidden}
+.r2det summary{list-style:none;display:flex;justify-content:space-between;align-items:center;padding:15px 16px;font-size:15px;font-weight:650;color:var(--ink);cursor:pointer;min-height:52px}
+.r2det summary::-webkit-details-marker{display:none}
+.r2det summary:after{content:"›";font-size:22px;color:#A0A6AE;transition:transform .2s}
+.r2det[open] summary:after{transform:rotate(90deg)}
+.r2detB{padding:0 16px 14px;border-top:.5px solid var(--line)}
+.r2passo{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8A9098;margin:16px 0 4px}
+.r2eq{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:14px;border-bottom:.5px dashed var(--line)}
+.r2eq:last-child{border-bottom:0}
+.r2eq span{color:#4A5058;min-width:0}
+.r2eq b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.r2eq.tot{border-top:1.5px solid #D9DDE2;border-bottom:0;margin-top:4px;padding-top:10px;font-weight:750}
+.r2eq.tot span{color:var(--ink)}
+/* gráfico de meses: barra por mês, positivo para cima, negativo para baixo */
+.r2chart{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;align-items:stretch;height:140px;margin:14px 0 4px;position:relative}
+.r2col{display:grid;grid-template-rows:1fr 1fr;cursor:pointer;position:relative}
+.r2col .up,.r2col .dn{display:flex;justify-content:center}
+.r2col .up{align-items:flex-end;border-bottom:1px solid #C9CED5}
+.r2col .dn{align-items:flex-start}
+.r2col i{display:block;width:62%;max-width:26px}
+.r2col .up i{border-radius:4px 4px 0 0;background:var(--green)}
+.r2col .dn i{border-radius:0 0 4px 4px;background:var(--red)}
+.r2col.and .up i{background:repeating-linear-gradient(45deg,var(--green) 0 4px,#7FC6A0 4px 7px)}
+.r2col.sel i{outline:2px solid var(--ink);outline-offset:1px}
+.r2meses{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;font-size:10.5px;color:#8A9098;text-align:center;font-weight:600}
+.r2tip{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
+.r2tip b{color:var(--ink)}
+.r2split{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin:14px 0 8px}
+.r2split i{display:block}
+.r2leg{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.r2leg span{display:flex;align-items:center;gap:6px}
+.r2leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.r2leg b{color:var(--ink);font-variant-numeric:tabular-nums}
+.r2warn{background:var(--amber-bg);color:#8A641F;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4;margin:10px 0 0}
+.r2mv{border:0;background:#F0F2F5;color:#4B525B;font:600 12px -apple-system,system-ui,sans-serif;border-radius:8px;padding:4px 9px;margin-top:4px;cursor:pointer}
+.sheet .r2eq span{color:#4A5058}
 </style>
 </head>
 <body>
 
 <header>
   <div class="hrow">
-    <div class="brand"><div class="eyebrow">Painel financeiro · Fábio</div><div class="htitle">Resultados</div></div>
+    <div class="brand"><div class="htitle">Resultados</div></div>
     <div class="hactions"><span class="syncpill" id="syncPill" onclick="openSync()">⚪ sem sync</span><button class="menubtn" onclick="openMenu()" aria-label="Menu">☰</button></div>
   </div>
   <div id="verTag"></div>
@@ -147,6 +238,17 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 </header>
 
 <main id="view"></main>
+<nav class="r2nav" aria-label="Seções">
+ <button id="nv-saldo" onclick="setTab('saldo');window.scrollTo(0,0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Este mês</button>
+ <button id="nv-mes" onclick="setTab('mes');window.scrollTo(0,0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Meses</button>
+ <button id="nv-patr" onclick="setTab('patr');window.scrollTo(0,0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10M10 20v-6h4v6"/></svg>Patrimônio</button>
+</nav>
+<div class="overlay" id="ovR2" onclick="if(event.target===this)r2SheetFechar()">
+  <div class="sheet">
+    <button class="close" onclick="r2SheetFechar()">✕</button>
+    <div id="r2SheetBody"></div>
+  </div>
+</div>
 
 
 
@@ -222,14 +324,14 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 <div class="overlay" id="ovBem" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="sheet">
     <button class="close" onclick="document.getElementById('ovBem').classList.remove('open')">✕</button>
-    <h3>Novo bem</h3>
-    <div class="askMsg">Cadastre imóveis e outros bens. O item fica salvo e sincronizado entre os aparelhos.</div>
+    <h3 id="bmTitulo">Novo bem</h3>
+    
     <div class="lbl">Descrição</div>
     <input class="field" id="bmNome" placeholder="ex.: Casa em Itaipuaçu">
     <div class="lbl">Valor</div>
     <input class="field" id="bmVal" inputmode="text" placeholder="ex.: 1.000.000,00">
     <div class="row">
-      <button class="btn ghost" onclick="document.getElementById('ovBem').classList.remove('open')">Cancelar</button>
+      <button class="btn danger" id="bmDel" onclick="delBemAtual()" style="display:none">Excluir</button>
       <button class="btn primary" onclick="saveBem()">Salvar</button>
     </div>
   </div>
@@ -250,7 +352,7 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=36; var APP_DATE='09/09/2026';
+var APP_VER=37; var APP_DATE='07/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -848,7 +950,7 @@ function render(){
  if(TAB==='saldo') h=viewSaldo();
  else if(TAB==='mes') h=viewMes();
  else h=viewPatr();
- document.getElementById('view').innerHTML=h;
+ document.getElementById('view').innerHTML=h;_r2Nav();
  try{window.scrollTo(0,_sy)}catch(e){}
 }
 function fonteAviso(){
@@ -859,7 +961,7 @@ function fonteAviso(){
  return '<div class="sourceWarning"><b>Fonte ainda não recebida:</b> '+faltam.join(' e ')
   +'. Confira se todos estão sincronizados com a mesma chave da família.</div>';
 }
-function viewSaldo(){
+function _viewSaldoV36(){
  var s=saldo(), ent=entradas(), sai=saidas(), margemReal=margemPct(ent,sai);
  var h=fonteAviso(), r=mesRef();
  var pa=periodoAberto(), l=limitesMesRef(), da=diasNoMesRef(pa.ini,pa.fim), receberMes=aReceberAberto();
@@ -944,7 +1046,7 @@ function viewSaldo(){
  }
  return h;
 }
-function viewMes(){
+function _viewMesV36(){
  var h=fonteAviso();
  var mesAtual=mesRef().label;
  var ganhoAtual=entradas(), despAtual=saidas(), resAtual=ganhoAtual-despAtual, margemAtual=margemPct(ganhoAtual,despAtual);
@@ -1083,7 +1185,7 @@ function montaMeses(){
  });
  return arr;
 }
-function viewPatr(){
+function _viewPatrV36(){
  var carros=carrosFabio(), tc=totalCarros(), tb=totalBens(), tp=patrimonio();
  var h='<section class="hero neutral"><div class="heroHead"><span class="heroLabel">Patrimônio do Fábio</span><span class="chip">'+carros.length+' carros</span></div>'
   +'<div class="heroValue big">'+fmt(tp)+'</div>'
@@ -1205,8 +1307,8 @@ function blurBem(id,el){var b=findBem(id);if(b)el.value=b.v?fmt(b.v):''}
 function setBemNome(id,v){var b=findBem(id);if(!b)return;b.nome=v;b.at=agora();b.by=DEV;save()}
 function setBemVal(id,v){var b=findBem(id);if(!b)return;b.v=parseVal(v);b.at=agora();b.by=DEV;save();
  try{var t=document.querySelector('.big');if(t)t.textContent=fmt(patrimonio())}catch(e){}}
-function openBem(){BM_ID=null;document.getElementById('bmNome').value='';document.getElementById('bmVal').value='';document.getElementById('ovBem').classList.add('open')}
-function saveBem(){
+function _openBemV36(){BM_ID=null;document.getElementById('bmNome').value='';document.getElementById('bmVal').value='';document.getElementById('ovBem').classList.add('open')}
+function _saveBemV36(){
  var n=(document.getElementById('bmNome').value||'').trim();
  var v=parseVal(document.getElementById('bmVal').value);
  if(!n){toast('⚠️ Escreva a descrição');return}
@@ -1233,6 +1335,162 @@ function openFontes(){
  document.getElementById('ovFontes').classList.add('open');
 }
 
+
+/* ===================== v37 — NOVA INTERFACE =====================
+   Só a apresentação mudou. Todas as contas (rateio por dia, média, projeção, meses,
+   patrimônio) continuam nas MESMAS funções acima, sem alteração. */
+var R2_TODAS=false,R2_ABERTO={};
+/* seção aberta continua aberta quando a tela se atualiza sozinha (dados chegando da nuvem) */
+function _r2Det(k,titulo){return '<details class="r2det"'+(R2_ABERTO[k]?' open':'')+' ontoggle="R2_ABERTO[\''+k+'\']=this.open"><summary>'+titulo+'</summary><div class="r2detB">'}
+function _r2Cap(s){s=String(s||'').toLowerCase();return s.charAt(0).toUpperCase()+s.slice(1)}
+function _r2Bar(nome,v,mx,cls){return '<div class="r2bar"><div class="r2barT"><span>'+nome+'</span><b>'+fmt(v)+'</b></div><div class="r2barL"><i class="'+cls+'" style="width:'+Math.max(2,Math.min(100,v/mx*100))+'%"></i></div></div>'}
+function _r2Cls(v){return v<0?'r':'g'}
+function _r2Eq(a,b,cls){return '<div class="r2eq'+(cls?' '+cls:'')+'"><span>'+a+'</span><b>'+b+'</b></div>'}
+function _r2Head(eyebrow,titulo,extra){return '<div class="r2head">'+(eyebrow?'<div class="r2eyebrow">'+eyebrow+'</div>':'')+'<div class="r2titulo">'+titulo+'</div>'+(extra||'')+'</div>'}
+function _r2Nav(){['saldo','mes','patr'].forEach(function(t){var b=document.getElementById('nv-'+t);if(b)b.classList.toggle('on',TAB===t)})}
+/* folha genérica (detalhe do mês) */
+function r2Sheet(html){var o=document.getElementById('ovR2');document.getElementById('r2SheetBody').innerHTML=html;o.classList.add('open')}
+function r2SheetFechar(){document.getElementById('ovR2').classList.remove('open')}
+
+/* ---------- ESTE MÊS ---------- */
+function viewSaldo(){
+ var r=mesRef(),fim=diasNoMes(),dh=diaHoje(),pf=previsao(fim),s=saldo(),ent=entradas(),sai=saidas(),med=mediaSemanal(),rec=aReceberAberto();
+ var h=fonteAviso();
+ h+=_r2Head(_r2Cap(r.label.split('/')[0])+' '+r.y+' · dia '+dh+' de '+fim,'Este mês','<div class="r2prog"><i style="width:'+(dh/fim*100)+'%"></i></div>');
+ var mx=Math.max(pf.ganho,pf.despesa,1);
+ h+='<section class="r2card"><div class="r2lbl"><span>Vai fechar o mês em</span></div>'+
+  '<div class="r2big '+_r2Cls(pf.saldo)+'">'+fmt(pf.saldo)+'</div>'+
+  '<div class="r2sub">Margem prevista <b>'+fmtPct(pf.margem)+'</b></div>'+
+  '<div class="r2bars">'+_r2Bar('Ganhos previstos',pf.ganho,mx,'r2bg')+_r2Bar('Despesas do mês',pf.despesa,mx,'r2br')+'</div></section>';
+ h+='<section class="r2card"><div class="r2lbl"><span>Até hoje</span></div>'+
+  '<div class="r2mid '+_r2Cls(s)+'">'+fmt(s)+'</div>'+
+  '<div class="r2sub">Recebido <b>'+fmt(ent)+'</b> − pago <b>'+fmt(sai)+'</b>'+(rec?'<br>Falta receber da semana aberta: <b>'+fmt(rec)+'</b>':'')+'</div></section>';
+ /* caixa nos dias de vencimento */
+ var cps=checkpoints();
+ if(cps.length){
+  var neg=cps.filter(function(d){return previsao(d).saldo<0});
+  h+='<section class="r2card"><div class="r2lbl"><span>Caixa nos vencimentos</span></div>';
+  h+=neg.length?'<div class="r2alerta bad">'+(neg.length===1?'No dia '+neg[0]:'Nos dias '+neg.slice(0,-1).join(', ')+' e '+neg[neg.length-1])+' o caixa previsto fica negativo.</div>':'<div class="r2alerta ok">Nenhum vencimento deixa o caixa negativo.</div>';
+  cps.forEach(function(d){
+   var p=previsao(d),cd=0;despPendentes().forEach(function(i){if(parseInt(i.day,10)===d)cd+=valorDespProjetado(i)});
+   h+='<div class="r2dia'+(p.saldo<0?' neg':'')+'"><div class="d">'+d+'<small>'+(d===fim?'FIM':'DIA')+'</small></div><div><div class="r2rowT">'+(d===fim?'Fechamento do mês':'Contas do dia')+'</div><div class="r2rowS">'+(cd?fmt(cd)+' a pagar':'sem conta no dia')+'</div></div><div class="r2val '+_r2Cls(p.saldo)+'">'+fmt(p.saldo)+'</div></div>';
+  });
+  h+='</section>';
+ }
+ /* próximas contas */
+ var pend=despPendentes().slice().sort(function(a,b){return (parseInt(a.day,10)||99)-(parseInt(b.day,10)||99)});
+ if(pend.length){
+  var tot=0;pend.forEach(function(i){tot+=valorDespProjetado(i)});
+  h+='<section class="r2card"><div class="r2lbl"><span>Contas a pagar</span><span>'+pend.length+' · '+fmt(tot)+'</span></div>';
+  (R2_TODAS?pend:pend.slice(0,5)).forEach(function(i){
+   var vp=valorDespProjetado(i),est=(i.v||0)===0&&vp!==0;
+   h+='<div class="r2row"><div><div class="r2rowT">'+esc(i.desc)+'</div><div class="r2rowS">'+(i.day?'Dia '+esc(i.day):'Sem dia')+(est?' · valor do mês passado':'')+'</div></div><div class="r2val">'+(est?'~ ':'')+fmt(vp)+'</div></div>';
+  });
+  if(!R2_TODAS&&pend.length>5)h+='<button class="r2link" onclick="R2_TODAS=true;render()">Ver todas ('+pend.length+')</button>';
+  h+='</section>';
+ }
+ /* como calculei */
+ var pa=periodoAberto(),l=limitesMesRef(),abertoReceb=valorPeriodoNoIntervalo(semRecebidoAtual(),pa,l.ini,l.fim);
+ h+=_r2Det('calc','Como calculei');
+ h+='<div class="r2passo">Até hoje</div>';
+ semFechadasNovas().forEach(function(w){var p=periodoSemana(w);h+=_r2Eq('Semana '+periodoTxt(p)+' · '+(p?diasNoMesRef(p.ini,p.fim):0)+' de 7 dias no mês','<span class="g">'+fmt(rateioSemana(w))+'</span>')});
+ h+=_r2Eq('Semana aberta '+periodoTxt(pa)+' · recebido','<span class="g">'+fmt(abertoReceb)+'</span>')+_r2Eq('Despesas já pagas','<span class="r">− '+fmt(sai)+'</span>')+_r2Eq('Resultado até hoje','<span class="'+_r2Cls(s)+'">'+fmt(s)+'</span>','tot');
+ h+='<div class="r2passo">Previsão do mês</div>';
+ planoProjecao(fim).forEach(function(x){h+=_r2Eq(periodoTxt(x.p)+' · '+x.dias+' de 7 dias · '+(x.tipo==='fechada'?'fechada':x.tipo==='aberta'?'aberta (pago + pendente)':'pela média'),'<span class="g">'+fmt(x.valor)+'</span>')});
+ h+=_r2Eq('Ganhos previstos','<span class="g">'+fmt(pf.ganho)+'</span>')+_r2Eq('Despesas do mês','<span class="r">− '+fmt(pf.despesa)+'</span>')+_r2Eq('Fechamento previsto','<span class="'+_r2Cls(pf.saldo)+'">'+fmt(pf.saldo)+'</span>','tot');
+ h+='<div class="r2sub" style="margin-top:12px">Toda semana é dividida em 7 dias; só os dias que caem no mês entram nele. Semana fechada usa o valor real, a aberta usa pago + pendente e as que ainda não abriram usam a média de <b>'+fmt(med)+'</b> ('+esc(origemMedia())+').'+(despesasEstimadas().length?' Conta ainda sem valor usa o valor do mês passado.':'')+'</div>';
+ h+='<button class="r2btn sec" style="margin-top:12px" onclick="editarMedia()">Alterar a média semanal</button></div></details>';
+ return h;
+}
+
+/* ---------- MESES ---------- */
+function viewMes(){
+ var meses=montaMeses(),h=fonteAviso();
+ h+=_r2Head('Desde '+_r2Cap(((manuais()[0]||{}).mes||mesInicioLabel()).replace('/',' de ')),'Meses');
+ if(!meses.length){
+  h+='<section class="r2card"><div class="r2sub">Nenhum mês ainda. Conforme o Semanal e as Despesas fecharem, os meses aparecem aqui sozinhos.</div></section><button class="r2btn sec" onclick="openMes(null)">+ Lançar mês antigo</button>';
+  return h;
+ }
+ var tg=0,td=0;meses.forEach(function(m){tg+=m.ganho;td+=m.desp});var tr=tg-td;
+ h+='<section class="r2card"><div class="r2lbl"><span>Resultado acumulado</span><span>'+meses.length+' meses</span></div>'+
+  '<div class="r2big '+_r2Cls(tr)+'">'+fmt(tr)+'</div><div class="r2sub">Margem <b>'+fmtPct(margemPct(tg,td))+'</b> · ganhos <b>'+fmt(tg)+'</b> · despesas <b>'+fmt(td)+'</b></div>';
+ /* gráfico: resultado de cada mês, do mais antigo ao mais novo */
+ var cron=meses.slice().reverse(),mx=1;cron.forEach(function(m){mx=Math.max(mx,Math.abs(m.ganho-m.desp))});
+ h+='<div class="r2chart" role="img" aria-label="Resultado por mês">';
+ cron.forEach(function(m){var rr=m.ganho-m.desp,pc=Math.abs(rr)/mx*100;
+  h+='<div class="r2col'+(m.andamento?' and':'')+'" onclick="r2MesDet(\''+esc(m.mes)+'\')" title="'+esc(_r2Cap(m.mes))+': '+fmt(rr)+'"><div class="up">'+(rr>=0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div><div class="dn">'+(rr<0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div></div>'});
+ h+='</div><div class="r2meses">';cron.forEach(function(m){h+='<span>'+_r2Cap(m.mes.slice(0,3))+'</span>'});h+='</div>';
+ h+='<div class="r2tip">Toque num mês para ver o detalhe.</div></section>';
+ h+='<section class="r2card">';
+ meses.forEach(function(m){var rr=m.ganho-m.desp;
+  var chip=m.andamento?'<span class="r2chip g">em andamento</span>':m.aguardaSemanal?'<span class="r2chip a">falta fechar semana</span>':m.manual?'<span class="r2chip">planilha</span>':'';
+  h+='<div class="r2row tap" onclick="r2MesDet(\''+esc(m.mes)+'\')"><div><div class="r2rowT">'+esc(_r2Cap(m.mes.replace('/',' ')))+chip+'</div><div class="r2rowS">Ganhos '+fmt(m.ganho)+' · despesas '+fmt(m.desp)+'</div></div><div class="r2val '+_r2Cls(rr)+'">'+fmt(rr)+'</div></div>';
+ });
+ h+='</section><button class="r2btn sec" onclick="openMes(null)">+ Lançar mês antigo</button>';
+ return h;
+}
+function r2MesDet(k){
+ var m=montaMeses().filter(function(x){return x.mes===k})[0];if(!m)return;
+ var rr=m.ganho-m.desp,h='<h3>'+esc(_r2Cap(m.mes.replace('/',' de ')))+'</h3>';
+ h+='<div class="r2big '+_r2Cls(rr)+'" style="font-size:32px">'+fmt(rr)+'</div><div class="r2sub" style="margin-bottom:12px">'+(m.andamento?'Realizado até hoje':m.aguardaSemanal?'Provisório: falta fechar a semana que atravessa a virada do mês':m.manual?'Valores lançados da planilha':'Mês fechado')+'</div>';
+ h+=_r2Eq('Ganhos','<span class="g">'+fmt(m.ganho)+'</span>')+_r2Eq('Despesas','<span class="r">− '+fmt(m.desp)+'</span>')+_r2Eq('Margem',fmtPct(margemPct(m.ganho,m.desp)));
+ if(m.semanas)h+=_r2Eq('Semanas do Semanal que tocam o mês',String(m.semanas));
+ if((m.andamento||m.aguardaSemanal)&&typeof m.projGanho==='number'){var rp=m.projGanho-m.projDesp;
+  h+='<div class="r2passo">Previsão para o fechamento</div>'+_r2Eq('Ganhos previstos','<span class="g">'+fmt(m.projGanho)+'</span>')+_r2Eq('Despesas','<span class="r">− '+fmt(m.projDesp)+'</span>')+_r2Eq('Resultado previsto · margem '+fmtPct(margemPct(m.projGanho,m.projDesp)),'<span class="'+_r2Cls(rp)+'">'+fmt(rp)+'</span>','tot')}
+ if(m.manual)h+='<button class="r2btn" style="margin-top:16px" onclick="r2SheetFechar();openMes(\''+m.mid+'\')">Editar valores deste mês</button>';
+ r2Sheet(h);
+}
+
+/* ---------- PATRIMÔNIO ---------- */
+function _r2Carro(c){
+ var vr=variacao(c);
+ return '<div class="r2row"><div><div class="r2rowT">'+esc(c.nome||c.modeloCRLV||'')+'</div><div class="r2rowS">'+esc(c.placa||'')+(vr?' · <span class="'+(vr.pct<0?'r':'g')+'">'+(vr.pct<0?'▼':'▲')+' '+Math.abs(vr.pct).toFixed(1).replace('.',',')+'%</span> vs '+esc(vr.de):'')+'</div></div><div class="r2val">'+(c.valorRef>0?fmt(Math.round(c.valorRef*100)):'<span style="color:var(--amber)">sem FIPE</span>')+'<br><button class="r2mv" onclick="toggleMeu(\''+esc(c.placa)+'\')">Mover ↔</button></div></div>';
+}
+function _r2Var(lista){var ant=0,dif=0,n=0;lista.forEach(function(c){var r=snap()[norPlaca(c.placa)],v=variacao(c);if(r&&r.antV&&v){ant+=r.antV;dif+=v.dif;n++}});if(!n)return '';var pct=ant?dif/ant*100:0;return '<div class="r2sub">Desde a tabela anterior: <span class="'+(dif<0?'r':'g')+'">'+(dif<0?'▼':'▲')+' '+Math.abs(pct).toFixed(1).replace('.',',')+'% · '+fmt(Math.abs(dif))+'</span></div>'}
+function viewPatr(){
+ var carros=carrosFabio(),tc=totalCarros(),tb=totalBens(),tp=patrimonio(),h='';
+ h+=_r2Head('Fábio','Patrimônio');
+ h+='<section class="r2card"><div class="r2lbl"><span>Total</span></div><div class="r2big">'+fmt(tp)+'</div>'+
+  '<div class="r2split"><i class="r2bn" style="flex:'+Math.max(tb,0)+'"></i><i style="flex:'+Math.max(tc,0)+';background:#8FA3C2"></i></div>'+
+  '<div class="r2leg"><span><i class="r2bn"></i>Bens <b>'+fmt(tb)+'</b></span><span><i style="background:#8FA3C2"></i>Carros <b>'+fmt(tc)+'</b></span></div></section>';
+ h+='<section class="r2card"><div class="r2lbl"><span>Bens</span><span>'+bens().length+'</span></div>';
+ if(!bens().length)h+='<div class="r2sub">Nenhum bem cadastrado. Ex.: casa em Itaipuaçu.</div>';
+ bens().forEach(function(b){h+='<div class="r2row tap" onclick="openBem(\''+b.id+'\')"><div class="r2rowT">'+esc(b.nome||'Sem nome')+'</div><div class="r2val">'+fmt(b.v||0)+'</div></div>'});
+ h+='<button class="r2link" onclick="openBem()">+ Adicionar bem</button></section>';
+ h+='<section class="r2card"><div class="r2lbl"><span>Frota Fábio</span><span>'+carros.length+' carros</span></div>';
+ if(!GEST)h+='<div class="r2sub">Ainda não recebi os dados do Gestão.</div>';
+ else{
+  h+='<div class="r2mid">'+fmt(tc)+'</div>'+_r2Var(carros);
+  var sf=semFipe();if(sf.length)h+='<div class="r2warn">'+sf.length+' carro'+(sf.length>1?'s':'')+' sem FIPE no Gestão ('+sf.map(function(c){return esc(c.placa)}).join(', ')+'). Preencha lá para entrar no total.</div>';
+ }
+ h+='</section>';
+ if(GEST&&carros.length){h+=_r2Det('fabio','Ver os '+carros.length+' carros do Fábio');carros.forEach(function(c){h+=_r2Carro(c)});h+='</div></details>'}
+ var meus=meusCarros();
+ if(GEST){var tm=0;meus.forEach(function(c){tm+=Math.round((c.valorRef||0)*100)});
+  h+=_r2Det('hudson','Frota Hudson · fora do total ('+meus.length+')');
+  if(!meus.length)h+='<div class="r2sub" style="padding-top:10px">Nenhum carro na frota Hudson.</div>';
+  else{meus.forEach(function(c){h+=_r2Carro(c)});h+=_r2Eq(meus.length+' carro'+(meus.length>1?'s':''),fmt(tm),'tot')+_r2Var(meus)}
+  h+='<div class="r2sub" style="margin-top:8px">FIPE vem sozinha do Gestão. “Mover ↔” troca o carro de frota.</div></div></details>'}
+ return h;
+}
+/* bens: tocar na linha abre para editar (antes era campo de texto direto na lista) */
+function openBem(id){
+ var b=id?findBem(id):null;BM_ID=b?id:null;
+ document.getElementById('bmTitulo').textContent=b?'Editar bem':'Novo bem';
+ document.getElementById('bmNome').value=b?(b.nome||''):'';
+ document.getElementById('bmVal').value=b&&b.v?rawVal(b.v):'';
+ document.getElementById('bmDel').style.display=b?'':'none';
+ document.getElementById('ovBem').classList.add('open');
+}
+function saveBem(){
+ var n=(document.getElementById('bmNome').value||'').trim();
+ var v=parseVal(document.getElementById('bmVal').value);
+ if(!n){toast('⚠️ Escreva a descrição');return}
+ if(BM_ID){var b=findBem(BM_ID);if(b){b.nome=n;b.v=v;b.at=agora();b.by=DEV}save();document.getElementById('ovBem').classList.remove('open');render();toast('Bem atualizado ✓');return}
+ state.bens=toArr(state.bens); state.bens.push({id:uid(),nome:n,v:v,at:agora(),by:DEV});
+ save(); document.getElementById('ovBem').classList.remove('open'); render(); toast('Bem adicionado ✓');
+}
+function delBemAtual(){if(!BM_ID)return;var id=BM_ID;document.getElementById('ovBem').classList.remove('open');delBem(id)}
 
 /* ===== CAMPOS CONCORRENTES v23 =====
    Campos simples não dependem mais do rev global. Cada ajuste tem seu próprio carimbo;
