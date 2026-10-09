@@ -210,6 +210,14 @@ main{padding:6px 16px 8px!important;max-width:640px}
 .r2col.sel i{outline:2px solid var(--ink);outline-offset:1px}
 .r2meses{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;font-size:10.5px;color:#8A9098;text-align:center;font-weight:600}
 .r2tip{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
+/* v43 · meses por ano */
+.r2anoMeses{margin-top:10px;border-top:.5px solid var(--line)}
+.r2anoMeses .r2row:last-child{border-bottom:0}
+.r2anosTit{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#7F858E;margin:20px 4px 8px}
+.r2ano{cursor:pointer}
+.r2bigAno{font-size:28px}
+.r2anoSeta{display:inline-block;margin-left:6px;font-size:17px;color:#9AA0A8;transition:transform .2s;transform:rotate(90deg)}
+.r2ano.on .r2anoSeta{transform:rotate(-90deg)}
 .r2tip b{color:var(--ink)}
 .r2split{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin:14px 0 8px}
 .r2split i{display:block}
@@ -352,7 +360,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=42; var APP_DATE='09/10/2026';
+var APP_VER=43; var APP_DATE='09/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1404,29 +1412,51 @@ function viewSaldo(){
 }
 
 /* ---------- MESES ---------- */
+/* v43: organizado POR ANO. O ano mais novo fica aberto em cima ("Resultado acumulado de 2026");
+   os anos anteriores ficam embaixo, fechados, só com o acumulado do ano — toque para abrir o resumo. */
+var R2_ANOS_ABERTOS={};
+function r2Ano(y){R2_ANOS_ABERTOS[y]=!R2_ANOS_ABERTOS[y];render()}
+function _r2AnoCorpo(ms){
+ /* gráfico do ano (jan → dez) + lista dos meses do ano */
+ var cron=ms.slice().reverse(),mx=1,h='';cron.forEach(function(m){mx=Math.max(mx,Math.abs(m.ganho-m.desp))});
+ h+='<div class="r2chart" role="img" aria-label="Resultado por mês">';
+ cron.forEach(function(m){var rr=m.ganho-m.desp,pc=Math.abs(rr)/mx*100;
+  h+='<div class="r2col'+(m.andamento?' and':'')+'" onclick="event.stopPropagation();r2MesDet(\''+esc(m.mes)+'\')" title="'+esc(_r2Cap(m.mes))+': '+fmt(rr)+'"><div class="up">'+(rr>=0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div><div class="dn">'+(rr<0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div></div>'});
+ h+='</div><div class="r2meses">';cron.forEach(function(m){h+='<span>'+_r2Cap(m.mes.slice(0,3))+'</span>'});h+='</div>';
+ h+='<div class="r2tip">Toque num mês para ver o detalhe.</div>';
+ h+='<div class="r2anoMeses">';
+ ms.forEach(function(m){var rr=m.ganho-m.desp;
+  var chip=m.andamento?'<span class="r2chip g">em andamento</span>':m.aguardaSemanal?'<span class="r2chip a">falta fechar semana</span>':m.manual?'<span class="r2chip">planilha</span>':'';
+  h+='<div class="r2row tap" onclick="event.stopPropagation();r2MesDet(\''+esc(m.mes)+'\')"><div><div class="r2rowT">'+esc(_r2Cap(m.mes.replace('/',' ')))+chip+'</div><div class="r2rowS">Ganhos '+fmt(m.ganho)+' · despesas '+fmt(m.desp)+'</div></div><div class="r2val '+_r2Cls(rr)+'">'+fmt(rr)+'</div></div>';
+ });
+ return h+'</div>';
+}
 function viewMes(){
  var meses=montaMeses(),h=fonteAviso();
- h+=_r2Head('Desde '+_r2Cap(((manuais()[0]||{}).mes||mesInicioLabel()).replace('/',' de ')),'Meses');
+ h+=_r2Head('Resultado por ano','Meses');
  if(!meses.length){
   h+='<section class="r2card"><div class="r2sub">Nenhum mês ainda. Conforme o Semanal e as Despesas fecharem, os meses aparecem aqui sozinhos.</div></section><button class="r2btn sec" onclick="openMes(null)">+ Lançar mês antigo</button>';
   return h;
  }
- var tg=0,td=0;meses.forEach(function(m){tg+=m.ganho;td+=m.desp});var tr=tg-td;
- h+='<section class="r2card"><div class="r2lbl"><span>Resultado acumulado</span><span>'+meses.length+' meses</span></div>'+
-  '<div class="r2big '+_r2Cls(tr)+'">'+fmt(tr)+'</div><div class="r2sub">Margem <b>'+fmtPct(margemPct(tg,td))+'</b> · ganhos <b>'+fmt(tg)+'</b> · despesas <b>'+fmt(td)+'</b></div>';
- /* gráfico: resultado de cada mês, do mais antigo ao mais novo */
- var cron=meses.slice().reverse(),mx=1;cron.forEach(function(m){mx=Math.max(mx,Math.abs(m.ganho-m.desp))});
- h+='<div class="r2chart" role="img" aria-label="Resultado por mês">';
- cron.forEach(function(m){var rr=m.ganho-m.desp,pc=Math.abs(rr)/mx*100;
-  h+='<div class="r2col'+(m.andamento?' and':'')+'" onclick="r2MesDet(\''+esc(m.mes)+'\')" title="'+esc(_r2Cap(m.mes))+': '+fmt(rr)+'"><div class="up">'+(rr>=0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div><div class="dn">'+(rr<0?'<i style="height:'+Math.max(2,pc)+'%"></i>':'')+'</div></div>'});
- h+='</div><div class="r2meses">';cron.forEach(function(m){h+='<span>'+_r2Cap(m.mes.slice(0,3))+'</span>'});h+='</div>';
- h+='<div class="r2tip">Toque num mês para ver o detalhe.</div></section>';
- h+='<section class="r2card">';
- meses.forEach(function(m){var rr=m.ganho-m.desp;
-  var chip=m.andamento?'<span class="r2chip g">em andamento</span>':m.aguardaSemanal?'<span class="r2chip a">falta fechar semana</span>':m.manual?'<span class="r2chip">planilha</span>':'';
-  h+='<div class="r2row tap" onclick="r2MesDet(\''+esc(m.mes)+'\')"><div><div class="r2rowT">'+esc(_r2Cap(m.mes.replace('/',' ')))+chip+'</div><div class="r2rowS">Ganhos '+fmt(m.ganho)+' · despesas '+fmt(m.desp)+'</div></div><div class="r2val '+_r2Cls(rr)+'">'+fmt(rr)+'</div></div>';
+ var anos={},ordem=[];
+ meses.forEach(function(m){var y=String(m.mes).split('/')[1]||'';if(!anos[y]){anos[y]=[];ordem.push(y)}anos[y].push(m)});
+ ordem.sort(function(a,b){return (parseInt(b,10)||0)-(parseInt(a,10)||0)});
+ ordem.forEach(function(y,i){
+  var ms=anos[y],tg=0,td=0;ms.forEach(function(m){tg+=m.ganho;td+=m.desp});var tr=tg-td;
+  var atual=i===0,aberto=atual||!!R2_ANOS_ABERTOS[y];
+  var nm=ms.length+(ms.length===1?' mês':' meses');
+  if(atual){
+   h+='<section class="r2card"><div class="r2lbl"><span>Resultado acumulado de '+y+'</span><span>'+nm+'</span></div>'
+    +'<div class="r2big '+_r2Cls(tr)+'">'+fmt(tr)+'</div><div class="r2sub">Margem <b>'+fmtPct(margemPct(tg,td))+'</b> · ganhos <b>'+fmt(tg)+'</b> · despesas <b>'+fmt(td)+'</b></div>'
+    +_r2AnoCorpo(ms)+'</section>';
+   if(ordem.length>1)h+='<div class="r2anosTit">Anos anteriores</div>';
+  }else{
+   h+='<section class="r2card r2ano'+(aberto?' on':'')+'" onclick="r2Ano(\''+y+'\')"><div class="r2lbl"><span>Acumulado de '+y+'</span><span>'+nm+' <b class="r2anoSeta">›</b></span></div>'
+    +'<div class="r2big r2bigAno '+_r2Cls(tr)+'">'+fmt(tr)+'</div><div class="r2sub">Margem <b>'+fmtPct(margemPct(tg,td))+'</b> · ganhos <b>'+fmt(tg)+'</b> · despesas <b>'+fmt(td)+'</b></div>'
+    +(aberto?_r2AnoCorpo(ms):'')+'</section>';
+  }
  });
- h+='</section><button class="r2btn sec" onclick="openMes(null)">+ Lançar mês antigo</button>';
+ h+='<button class="r2btn sec" onclick="openMes(null)">+ Lançar mês antigo</button>';
  return h;
 }
 function r2MesDet(k){
