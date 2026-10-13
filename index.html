@@ -360,7 +360,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=43; var APP_DATE='09/10/2026';
+var APP_VER=44; var APP_DATE='09/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -768,12 +768,20 @@ function todosCarros(){
  if(!GEST) return [];
  return toArr(GEST.cars||GEST.carros||GEST.frota).filter(function(c){return !!c});
 }
-function ehMeu(c){ return toArr(state.meus).indexOf(norPlaca(c&&c.placa))>=0 }
+/* v44: de quem é o carro. 1º) o que você escolheu aqui ("Mover ↔") vale; 2º) senão, o que está no Gestão
+   (campo "Frota Hudson" do carro); 3º) senão, a lista antiga. Antes o Resultados ignorava o Gestão e só usava
+   uma lista fixa de 4 placas — carro novo marcado como Hudson lá entrava como do Fábio aqui. */
+function ehMeu(c){
+ var p=norPlaca(c&&c.placa),mm=(state.meusMeta&&typeof state.meusMeta==='object')?state.meusMeta:{};
+ if(mm[p]&&mm[p].by!=='legacy'&&Number(mm[p].at)>1)return !!mm[p].v;
+ if(c&&c.meuCarro)return true;
+ return toArr(state.meus).indexOf(p)>=0;
+}
 function carrosFabio(){ /* patrimônio do pai = TODOS menos os carros do Hudson */
  return todosCarros().filter(function(c){ return !ehMeu(c) });
 }
 function meusCarros(){ return todosCarros().filter(ehMeu) }
-function toggleMeu(placa){var p=norPlaca(placa),mm=_rMeusMetaFrom(state),era=!!(mm[p]&&mm[p].v);mm[p]={v:!era,at:Date.now(),by:DEV};state.meusMeta=mm;state.meus=_rMeusArray(mm);_rStamp('meus');save();render();toast(era?'Movido para a frota Fábio':'Movido para a frota Hudson')}
+function toggleMeu(placa){var p=norPlaca(placa),mm=_rMeusMetaFrom(state),cc=todosCarros().filter(function(c){return norPlaca(c.placa)===p})[0],era=cc?ehMeu(cc):!!(mm[p]&&mm[p].v);mm[p]={v:!era,at:Date.now(),by:DEV};state.meusMeta=mm;state.meus=_rMeusArray(mm);_rStamp('meus');save();render();toast(era?'Movido para a frota Fábio':'Movido para a frota Hudson')}
 function semFipe(){ return carrosFabio().filter(function(c){return !(c.valorRef>0)}) }
 function snap(){ return (state.fipeSnap&&typeof state.fipeSnap==='object')?state.fipeSnap:{} }
 function registrarFipe(){
