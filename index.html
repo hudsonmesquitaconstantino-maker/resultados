@@ -245,6 +245,28 @@ main{padding:6px 16px 8px!important;max-width:640px}
 .pcBar i{display:block;height:100%;border-radius:2px;background:#2E8B57}.pcBar i.r{background:#C0392B}
 .pcNota{margin:4px 4px 16px;font-size:12.5px}
 .pcInfo{font-size:13px;color:#5B4A1F;background:#FFF6E3;border-radius:10px;padding:10px 12px;margin:0 0 12px;line-height:1.4}
+
+/* v46 · Carros: semáforo e linguagem simples */
+.pcHero .r2big{margin:2px 0 4px}
+.pcFrase{font-size:15px;color:#4B515A}.pcFrase2{font-size:14px;color:#4B515A;line-height:1.45}
+.pcSem{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+.pcSem button{border:0;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit}
+.pcSem button b{font-size:24px;font-weight:800;line-height:1}.pcSem button span{font-size:12px;font-weight:600}
+.pcSem .r{background:#FDECEA;color:#B33A33}.pcSem .a{background:#FFF4DC;color:#8A5A00}.pcSem .g{background:#E8F5EE;color:#1F7A4A}
+.pcGrupoT{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin:18px 4px 2px;scroll-margin-top:10px}
+.pcGrupoT b{margin-left:auto;font-size:13px;color:#7A808A}
+.pcGrupoS{font-size:12.5px;color:#7A808A;margin:0 4px 8px}
+.pcDot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}.pcDot.r{background:#D64541}.pcDot.a{background:#E0A100}.pcDot.g{background:#2E9B5F}
+.pcCar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:.5px solid var(--line);cursor:pointer}
+.pcCar:last-child{border-bottom:0}
+.pcNome{font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcPq{font-size:13px;color:#6B7079;margin-top:2px;line-height:1.35}
+.pcVal{text-align:right;white-space:nowrap}.pcVal b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.pcVal small{font-size:11.5px;color:#8A9098}
+.pcVal.r b{color:#C0392B}.pcVal.a b{color:#9A6700}.pcVal.g b{color:#1F7A4A}
+.pcTag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:-4px}
+.pcTag.r{background:#FDECEA;color:#B33A33}.pcTag.a{background:#FFF4DC;color:#8A5A00}.pcTag.g{background:#E8F5EE;color:#1F7A4A}
+.pcPorSem{font-size:15px;font-weight:600;color:#7A808A;letter-spacing:0}
+.pcEx{background:#F6F7F9;border-radius:12px;padding:10px 12px;margin:0 0 12px}.pcEx p{margin:4px 0;font-size:14px;line-height:1.45;color:#30343B}
 </style>
 </head>
 <body>
@@ -378,7 +400,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=45; var APP_DATE='09/10/2026';
+var APP_VER=46; var APP_DATE='09/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1684,7 +1706,7 @@ try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js',{up
    · Manutenção = manutenções do Gestão daquele carro (só o que entra no fechamento — "não contabiliza" fica de fora);
    · Contas da placa = despesas do app Despesas que citam a placa (ex.: "Seguro Logan - GBV3B96").
    O período começa na 1ª semana registrada no Semanal, para não comparar receita "zerada" com manutenção antiga. */
-var PC={per:'tudo',fr:'fabio'};
+var PC={per:'tudo'};
 try{var _pcs=JSON.parse(localStorage.getItem('r_pc')||'null');if(_pcs){PC.per=_pcs.per||PC.per;PC.fr=_pcs.fr||PC.fr}}catch(e){}
 function _pcSalva(){try{localStorage.setItem('r_pc',JSON.stringify(PC))}catch(e){}}
 function pcSet(k,v){PC[k]=v;_pcSalva();render();try{window.scrollTo(0,0)}catch(e){}}
@@ -1711,7 +1733,7 @@ function pcDados(){
   Object.keys(GEST.manutencoes).forEach(function(id){var m=GEST.manutencoes[id];if(!m)return;var k=norPlaca(m.carro);if(!mapa[k])return;
    var d=_pcISO(m.dataFim||m.dataIni);if(!d||d<desde)return;
    var v=0;toArr(m.pecas).forEach(function(p){if(p&&!p.pendenteFinanceiro)v+=Number(p.valor)||0});toArr(m.blocos).forEach(function(b){if(b&&!b.pendenteFinanceiro)v+=Number(b.valor)||0});
-   v=Math.round(v*100);if(!v)return;mapa[k].man+=v;mapa[k].nMan++;mapa[k].manut.push({d:d,v:v,t:toArr(m.pecas).map(function(p){return p&&p.desc}).concat(toArr(m.blocos).map(function(b){return b&&toArr(b.servicos).join(', ')})).filter(Boolean).join(' · ')})});
+   v=Math.round(v*100);if(!v)return;mapa[k].man+=v;mapa[k].nMan++;mapa[k].manut.push({d:d,v:v,ini:_pcISO(m.dataIni),fim:_pcISO(m.dataFim||m.dataIni),t:toArr(m.pecas).filter(function(p){return p&&!p.pendenteFinanceiro}).map(function(p){return p&&p.desc}).concat(toArr(m.blocos).map(function(b){return b&&toArr(b.servicos).join(', ')})).filter(Boolean).join(' · ')})});
  }
  if(DESP){
   var chaves=lista.map(function(x){return x.k});
@@ -1726,47 +1748,90 @@ function pcDados(){
  var dias=Math.max(1,Math.round((hojeD-desde)/86400000)+1);
  return {lista:lista,desde:desde,inicio:inicio,dias:dias,semPlaca:semPlaca,despIni:despIni};
 }
+function _pcSemanasPeriodo(desde){
+ var n=0;if(!SEM)return 1;
+ toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(p&&p.fim>=desde)n++});
+ if(toArr(SEM.drivers).some(function(d){return d&&!d.del}))n++;
+ return Math.max(1,n);
+}
+function _pcDiasOficina(x,desde){
+ var t=0;x.manut.forEach(function(m){if(m.ini&&m.fim){var d=Math.round((m.fim-m.ini)/86400000)+1;if(d>1)t+=d}});return t;
+}
+/* v46: tela pensada para o Fábio entender de bate-pronto — só a frota dele, semáforo
+   (prejuízo / lucro baixo / dando lucro), valor POR SEMANA (compara carros que rodaram tempos diferentes)
+   e o motivo em português ("ficou 9 semanas sem pagar · R$ 17.572 de manutenção"). */
+function pcAnalise(){
+ var D=pcDados(),sem=_pcSemanasPeriodo(D.desde);
+ var ls=D.lista.filter(function(x){return x.c.status!=='pessoal'&&!ehMeu(x.c)});
+ ls.forEach(function(x){x.porSem=Math.round(x.lucro/sem);x.semSem=Math.max(0,sem-x.nSem);x.diasOf=_pcDiasOficina(x,D.desde)});
+ /* média de referência = mediana dos carros que dão lucro (os do prejuízo não puxam a régua para baixo) */
+ var ord=ls.filter(function(x){return x.lucro>=0}).map(function(x){return x.porSem}).sort(function(a,b){return a-b}),med=ord.length?ord[Math.floor(ord.length/2)]:0;
+ ls.forEach(function(x){x.cor=x.lucro<0?'r':(x.porSem<med*0.5?'a':'g')});
+ D.ls=ls;D.sem=sem;D.med=med;return D;
+}
+function _pcMotivo(x,D){
+ var p=[];
+ if(x.cor==='g'){p.push('pagou '+x.nSem+' de '+D.sem+' semanas');if(x.man)p.push(fmt(x.man)+' de manutenção');return p.join(' · ')}
+ if(x.semSem>=2)p.push('ficou '+x.semSem+' semanas sem pagar');
+ if(x.diasOf>=5)p.push(x.diasOf+' dias na oficina');
+ if(x.man)p.push(fmt(x.man)+' de manutenção');
+ if(!p.length)p.push('pagou '+x.nSem+' de '+D.sem+' semanas');
+ return p.join(' · ');
+}
 function viewCarros(){
  var h=fonteAviso();
- h+=_r2Head('Lucro por carro','Carros');
+ h+=_r2Head('Quanto cada carro do Fábio dá de lucro','Carros');
  if(!GEST||!SEM){h+='<section class="r2card"><div class="r2sub">Aguardando os dados do Gestão e do Semanal…</div></section>';return h}
- var D=pcDados(),hud=PC.fr==='hudson';
- var ls=D.lista.filter(function(x){return x.c.status!=='pessoal'&&(hud?ehMeu(x.c):!ehMeu(x.c))});
- ls.sort(function(a,b){return b.lucro-a.lucro});
- var nF=D.lista.filter(function(x){return x.c.status!=='pessoal'&&!ehMeu(x.c)}).length,nH=D.lista.filter(function(x){return x.c.status!=='pessoal'&&ehMeu(x.c)}).length;
- h+='<div class="pcAbas"><button class="'+(!hud?'on':'')+'" onclick="pcSet(\'fr\',\'fabio\')">Frota Fábio <b>'+nF+'</b></button><button class="'+(hud?'on':'')+'" onclick="pcSet(\'fr\',\'hudson\')">Frota Hudson <b>'+nH+'</b></button></div>';
- h+='<div class="pcPer">'+[['30','30 dias'],['90','90 dias'],['tudo','Desde o início']].map(function(o){return '<button class="'+(PC.per===o[0]?'on':'')+'" onclick="pcSet(\'per\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
- var tr=0,tm=0,td=0;ls.forEach(function(x){tr+=x.rec;tm+=x.man;td+=x.desp});var tl=tr-tm-td;
- var neg=ls.filter(function(x){return x.lucro<0});
- h+='<section class="r2card"><div class="r2lbl"><span>Lucro dos carros</span><span>'+ls.length+(ls.length===1?' carro':' carros')+' · '+fmtDia(D.desde)+' a hoje</span></div>'+
+ var D=pcAnalise(),ls=D.ls,mesIni=_r2Cap(MESES[D.inicio.getMonth()]);
+ h+='<div class="pcPer">'+[['30','Último mês'],['90','3 meses'],['tudo','Desde '+mesIni.toLowerCase()]].map(function(o){return '<button class="'+(PC.per===o[0]?'on':'')+'" onclick="pcSet(\'per\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
+ var tl=0,tr=0,tm=0,td=0;ls.forEach(function(x){tl+=x.lucro;tr+=x.rec;tm+=x.man;td+=x.desp});
+ var gR=ls.filter(function(x){return x.cor==='r'}),gA=ls.filter(function(x){return x.cor==='a'}),gG=ls.filter(function(x){return x.cor==='g'});
+ h+='<section class="r2card pcHero"><div class="pcFrase">Os <b>'+ls.length+' carros</b> deram</div>'+
   '<div class="r2big '+_r2Cls(tl)+'">'+fmt(tl)+'</div>'+
-  '<div class="r2sub">Recebido <b>'+fmt(tr)+'</b> · manutenção <b>'+fmt(tm)+'</b> · seguros e contas <b>'+fmt(td)+'</b></div>'+
-  (ls.length?'<div class="r2sub">Média por carro: <b>'+fmt(Math.round(tl/ls.length))+'</b> no período ('+D.dias+' dias)</div>':'')+
-  (neg.length&&!(hud&&!tr)?'<div class="pcAlerta">'+neg.length+' carro'+(neg.length>1?'s':'')+' no prejuízo neste período</div>':'')+'</section>';
- if(hud&&!tr)h+='<div class="pcInfo">Os pagamentos dos motoristas da Frota Hudson não passam pelo Semanal do Fábio. Por isso aqui aparecem só os custos (manutenção) dos seus carros.</div>';
- h+='<section class="r2card pcLista">';
- if(!ls.length)h+='<div class="r2sub">Nenhum carro nesta frota.</div>';
- var mx=1;ls.forEach(function(x){mx=Math.max(mx,Math.abs(x.lucro))});
- ls.forEach(function(x,i){var c=x.c,pc=Math.max(3,Math.abs(x.lucro)/mx*100);
-  h+='<div class="r2row tap pcRow" onclick="pcDet(\''+x.k+'\')"><div class="pcTx"><div class="r2rowT"><span class="pcPos">'+(i+1)+'</span>'+esc(c.nome||c.modeloCRLV||'')+' <span class="pcPl">'+esc(c.placa||'')+'</span></div>'+
-   '<div class="r2rowS">Recebeu '+fmt(x.rec)+' · manut. '+fmt(x.man)+(x.desp?' · contas '+fmt(x.desp):'')+'</div>'+
-   '<div class="pcBar"><i class="'+(x.lucro<0?'r':'g')+'" style="width:'+pc+'%"></i></div></div><div class="r2val '+_r2Cls(x.lucro)+'">'+fmt(x.lucro)+'</div></div>'});
- h+='</section>';
- h+='<div class="r2sub pcNota">Recebido = tudo que o motorista da placa pagou no Semanal. Manutenção = lançamentos do Gestão que entram no fechamento. Contas = despesas que citam a placa (ex.: seguro). Os registros do Semanal começam em '+fmtDia(D.inicio)+'/'+D.inicio.getFullYear()+'; carros pessoais ficam de fora.'+(D.despIni&&D.despIni>D.desde?' Seguros e contas só a partir de '+_r2Cap(MESES[D.despIni.getMonth()])+'/'+D.despIni.getFullYear()+' (início do app Despesas).':'')+(D.semPlaca>0?' '+fmt(D.semPlaca)+' recebidos sem placa no Semanal não entram em nenhum carro.':'')+'</div>';
+  '<div class="pcFrase2">de lucro de '+fmtDia(D.desde)+' até hoje ('+D.sem+' semanas). Em média, <b>'+fmt(Math.round(tl/Math.max(1,ls.length)/D.sem))+' por carro, por semana</b>.</div>'+
+  '<div class="pcSem">'+
+   '<button onclick="pcVai(\'pcR\')" class="r"><b>'+gR.length+'</b><span>no prejuízo</span></button>'+
+   '<button onclick="pcVai(\'pcA\')" class="a"><b>'+gA.length+'</b><span>lucro baixo</span></button>'+
+   '<button onclick="pcVai(\'pcG\')" class="g"><b>'+gG.length+'</b><span>dando lucro</span></button></div>'+
+  _r2Det('pcConta','Como chegamos nesse número')+
+   _r2Eq('Os motoristas pagaram','<span class="g">'+fmt(tr)+'</span>')+_r2Eq('Manutenção','<span class="r">− '+fmt(tm)+'</span>')+_r2Eq('Seguros dos carros','<span class="r">− '+fmt(td)+'</span>')+_r2Eq('Lucro','<span class="'+_r2Cls(tl)+'">'+fmt(tl)+'</span>','tot')+
+  '</div></details></section>';
+ function grupo(id,lista,tit,sub,cor){
+  if(!lista.length)return '';
+  var g='<div class="pcGrupoT '+cor+'" id="'+id+'"><span class="pcDot '+cor+'"></span>'+tit+' <b>'+lista.length+'</b></div><div class="pcGrupoS">'+sub+'</div><section class="r2card pcLista">';
+  lista.forEach(function(x){var c=x.c;
+   g+='<div class="pcCar tap" onclick="pcDet(\''+x.k+'\')"><div class="pcCarTx"><div class="pcNome">'+esc(c.nome||c.modeloCRLV||'')+' <span class="pcPl">'+esc(c.placa||'')+'</span></div>'+
+    '<div class="pcPq">'+esc(_pcMotivo(x,D))+'</div></div>'+
+    '<div class="pcVal '+cor+'"><b>'+fmt(x.porSem)+'</b><small>por semana</small></div></div>'});
+  return g+'</section>';
+ }
+ gR.sort(function(a,b){return a.lucro-b.lucro});gA.sort(function(a,b){return a.porSem-b.porSem});gG.sort(function(a,b){return b.porSem-a.porSem});
+ h+=grupo('pcR',gR,'No prejuízo','Gastaram mais do que entraram. Toque para ver o motivo.','r');
+ h+=grupo('pcA',gA,'Lucro baixo','Dão lucro, mas menos da metade do normal da frota ('+fmt(D.med)+' por semana).','a');
+ h+=grupo('pcG',gG,'Dando lucro','Do que mais rende para o que menos rende.','g');
+ h+='<div class="r2sub pcNota">Lucro = o que o motorista da placa pagou no Semanal − manutenção lançada no Gestão − seguro da placa no app Despesas. "Por semana" divide pelo período inteiro ('+D.sem+' semanas), então carro parado puxa a média para baixo.'+(D.despIni&&D.despIni>D.desde?' Seguros só a partir de '+_r2Cap(MESES[D.despIni.getMonth()]).toLowerCase()+'/'+D.despIni.getFullYear()+'.':'')+' Carros pessoais e a frota do Hudson não entram.</div>';
  return h;
 }
+function pcVai(id){var e=document.getElementById(id);if(e)try{e.scrollIntoView({behavior:'smooth',block:'start'})}catch(x){e.scrollIntoView()}}
 function pcDet(k){
- var D=pcDados(),x=D.lista.filter(function(y){return y.k===k})[0];if(!x)return;var c=x.c;
- var mg=margemPct(x.rec,x.man+x.desp),fipe=Math.round((c.valorRef||0)*100);
- var anual=Math.round(x.lucro*365/D.dias);
- var h='<h3>'+esc(c.nome||'')+' · '+esc(c.placa||'')+'</h3><div class="r2sub" style="margin:-6px 0 12px">'+fmtDia(D.desde)+' a hoje · '+x.nSem+' semana'+(x.nSem===1?'':'s')+' com pagamento</div>';
- h+='<div class="r2big '+_r2Cls(x.lucro)+'" style="font-size:32px">'+fmt(x.lucro)+'</div><div class="r2sub" style="margin-bottom:12px">Lucro no período · margem '+fmtPct(mg)+'</div>';
- h+=_r2Eq('Recebido do motorista','<span class="g">'+fmt(x.rec)+'</span>')+_r2Eq('Manutenção ('+x.nMan+')','<span class="r">− '+fmt(x.man)+'</span>')+_r2Eq('Seguros e contas da placa','<span class="r">− '+fmt(x.desp)+'</span>')+_r2Eq('Lucro','<span class="'+_r2Cls(x.lucro)+'">'+fmt(x.lucro)+'</span>','tot');
- if(fipe>0)h+='<div class="r2sub" style="margin-top:10px">FIPE '+fmt(fipe)+'. No ritmo deste período, o carro dá <b>'+fmt(anual)+' por ano</b> ('+fmtPct(anual/fipe*100)+' do valor dele).</div>';
+ var D=pcAnalise(),x=D.ls.filter(function(y){return y.k===k})[0];if(!x)return;var c=x.c;
+ var fipe=Math.round((c.valorRef||0)*100),anual=Math.round(x.porSem*52);
+ var cores={r:'No prejuízo',a:'Lucro baixo',g:'Dando lucro'};
+ var h='<h3>'+esc(c.nome||'')+' · '+esc(c.placa||'')+'</h3><div class="pcTag '+x.cor+'"><span class="pcDot '+x.cor+'"></span>'+cores[x.cor]+'</div>';
+ h+='<div class="r2big '+_r2Cls(x.lucro)+'" style="font-size:32px;margin-top:10px">'+fmt(x.porSem)+' <span class="pcPorSem">por semana</span></div>';
+ h+='<div class="r2sub" style="margin-bottom:12px">'+fmt(x.lucro)+' no total, de '+fmtDia(D.desde)+' até hoje ('+D.sem+' semanas).</div>';
+ /* explicação em português */
+ var ex=[];
+ ex.push('O motorista pagou <b>'+x.nSem+' de '+D.sem+' semanas</b>'+(x.semSem?' — <b>'+x.semSem+' sem pagamento</b>':'')+'.');
+ if(x.nMan)ex.push('Teve <b>'+x.nMan+' manutenç'+(x.nMan>1?'ões':'ão')+'</b>, somando <b>'+fmt(x.man)+'</b>'+(x.diasOf?', e ficou <b>'+x.diasOf+' dias na oficina</b>':'')+'.');
+ else ex.push('Não teve manutenção no período.');
+ var dif=x.porSem-D.med;
+ ex.push(dif>=0?'Rende <b>'+fmt(dif)+' por semana a mais</b> que o normal da frota ('+fmt(D.med)+').':'Rende <b>'+fmt(-dif)+' por semana a menos</b> que o normal da frota ('+fmt(D.med)+' por semana).');
+ h+='<div class="pcEx">'+ex.map(function(t){return '<p>'+t+'</p>'}).join('')+'</div>';
+ h+=_r2Eq('O motorista pagou','<span class="g">'+fmt(x.rec)+'</span>')+_r2Eq('Manutenção','<span class="r">− '+fmt(x.man)+'</span>')+_r2Eq('Seguro da placa','<span class="r">− '+fmt(x.desp)+'</span>')+_r2Eq('Lucro','<span class="'+_r2Cls(x.lucro)+'">'+fmt(x.lucro)+'</span>','tot');
+ if(fipe>0)h+='<div class="r2sub" style="margin-top:10px">O carro vale '+fmt(fipe)+' (FIPE). '+(anual>=0?'Nesse ritmo, dá '+fmt(anual)+' de lucro por ano — '+fmtPct(anual/fipe*100)+' do valor dele.':'Nesse ritmo, dá <b>'+fmt(-anual)+' de prejuízo por ano</b>.')+'</div>';
  if(x.manut.length){h+='<div class="r2lbl" style="margin-top:16px"><span>Manutenções</span><span>'+x.manut.length+'</span></div>';
-  x.manut.sort(function(a,b){return b.d-a.d}).slice(0,8).forEach(function(m){h+='<div class="r2row"><div><div class="r2rowT">'+fmtDia(m.d)+'/'+m.d.getFullYear()+'</div><div class="r2rowS">'+esc(String(m.t||'').slice(0,90))+'</div></div><div class="r2val r">'+fmt(m.v)+'</div></div>'})}
- if(x.contas.length){h+='<div class="r2lbl" style="margin-top:16px"><span>Contas da placa</span><span>'+x.contas.length+'</span></div>';
-  x.contas.sort(function(a,b){return b.d-a.d}).slice(0,6).forEach(function(m){h+='<div class="r2row"><div><div class="r2rowT">'+esc(m.t||'')+'</div><div class="r2rowS">'+_r2Cap(MESES[m.d.getMonth()])+'/'+m.d.getFullYear()+'</div></div><div class="r2val r">'+fmt(m.v)+'</div></div>'})}
+  x.manut.sort(function(a,b){return b.d-a.d}).slice(0,8).forEach(function(m){h+='<div class="r2row"><div><div class="r2rowT">'+fmtDia(m.d)+'/'+m.d.getFullYear()+(m.ini&&m.fim&&m.fim>m.ini?' · '+(Math.round((m.fim-m.ini)/86400000)+1)+' dias':'')+'</div><div class="r2rowS">'+esc(String(m.t||'').slice(0,90))+'</div></div><div class="r2val r">'+fmt(m.v)+'</div></div>'})}
  r2Sheet(h);
 }
 
