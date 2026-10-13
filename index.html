@@ -234,7 +234,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 .pcAbas button{border:0;background:transparent;border-radius:8px;min-height:36px;font:600 14px -apple-system,system-ui,sans-serif;color:#4B515A;display:flex;align-items:center;justify-content:center;gap:6px}
 .pcAbas button b{font-size:12.5px;color:#7A808A}.pcAbas button.on{background:#fff;color:#12141A;box-shadow:0 1px 3px rgba(17,24,39,.12)}
 .pcPer{display:flex;gap:6px;margin:0 0 12px}
-.pcPer button{flex:1;border:1px solid #DCDFE4;background:#fff;border-radius:999px;min-height:34px;font:600 13px -apple-system,system-ui,sans-serif;color:#4B515A}
+.pcPer button{flex:1;min-width:0;padding:0 4px;border:1px solid #DCDFE4;background:#fff;border-radius:999px;min-height:34px;font:600 13px -apple-system,system-ui,sans-serif;color:#4B515A}
 .pcPer button.on{background:#1C1C1E;border-color:#1C1C1E;color:#fff}
 .pcAlerta{margin-top:10px;font-size:13.5px;font-weight:700;color:#B33A33;background:#FDEDEC;border-radius:8px;padding:8px 10px}
 .pcLista{padding-top:4px;padding-bottom:4px}
@@ -400,7 +400,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=46; var APP_DATE='09/10/2026';
+var APP_VER=47; var APP_DATE='09/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1719,7 +1719,7 @@ function _pcInicio(){
 function pcDados(){
  var hojeD=new Date();hojeD=new Date(hojeD.getFullYear(),hojeD.getMonth(),hojeD.getDate());
  var inicio=_pcInicio()||somaDias(hojeD,-30),desde=inicio;
- if(PC.per==='30')desde=somaDias(hojeD,-30);else if(PC.per==='90')desde=somaDias(hojeD,-90);
+ if(PC.per==='30')desde=somaDias(hojeD,-30);else if(PC.per==='90')desde=somaDias(hojeD,-90);else if(PC.per==='365')desde=somaDias(hojeD,-365);
  if(desde<inicio)desde=inicio;
  var mapa={},lista=[];
  todosCarros().forEach(function(c){var k=norPlaca(c.placa);if(!k||mapa[k])return;mapa[k]={c:c,k:k,rec:0,man:0,desp:0,nMan:0,sem:{},manut:[],contas:[]};lista.push(mapa[k])});
@@ -1783,7 +1783,7 @@ function viewCarros(){
  h+=_r2Head('Quanto cada carro do Fábio dá de lucro','Carros');
  if(!GEST||!SEM){h+='<section class="r2card"><div class="r2sub">Aguardando os dados do Gestão e do Semanal…</div></section>';return h}
  var D=pcAnalise(),ls=D.ls,mesIni=_r2Cap(MESES[D.inicio.getMonth()]);
- h+='<div class="pcPer">'+[['30','Último mês'],['90','3 meses'],['tudo','Desde '+mesIni.toLowerCase()]].map(function(o){return '<button class="'+(PC.per===o[0]?'on':'')+'" onclick="pcSet(\'per\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
+ h+='<div class="pcPer">'+[['30','1 mês'],['90','3 meses'],['365','1 ano'],['tudo','Desde '+mesIni.toLowerCase()]].map(function(o){return '<button class="'+(PC.per===o[0]?'on':'')+'" onclick="pcSet(\'per\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
  var tl=0,tr=0,tm=0,td=0;ls.forEach(function(x){tl+=x.lucro;tr+=x.rec;tm+=x.man;td+=x.desp});
  var gR=ls.filter(function(x){return x.cor==='r'}),gA=ls.filter(function(x){return x.cor==='a'}),gG=ls.filter(function(x){return x.cor==='g'});
  h+='<section class="r2card pcHero"><div class="pcFrase">Os <b>'+ls.length+' carros</b> deram</div>'+
