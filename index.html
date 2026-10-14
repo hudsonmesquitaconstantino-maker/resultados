@@ -400,7 +400,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=49; var APP_DATE='14/10/2026';
+var APP_VER=50; var APP_DATE='14/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1526,8 +1526,10 @@ function _r2Carro(c){
  return '<div class="r2row"><div><div class="r2rowT">'+esc(c.nome||c.modeloCRLV||'')+'</div><div class="r2rowS">'+esc(c.placa||'')+(vr?' · <span class="'+(vr.pct<0?'r':'g')+'">'+(vr.pct<0?'▼':'▲')+' '+Math.abs(vr.pct).toFixed(1).replace('.',',')+'% · '+(vr.pct<0?'−':'+')+fmt(Math.abs(vr.dif))+'</span> vs '+esc(vr.de):'')+'</div></div><div class="r2val">'+(c.valorRef>0?fmt(Math.round(c.valorRef*100)):'<span style="color:var(--amber)">sem FIPE</span>')+'<br><button class="r2mv" onclick="toggleMeu(\''+esc(c.placa)+'\')">Mover ↔</button></div></div>';
 }
 function _r2Var(lista){var ant=0,dif=0,n=0;lista.forEach(function(c){var r=snap()[norPlaca(c.placa)],v=variacao(c);if(r&&r.antV&&v){ant+=r.antV;dif+=v.dif;n++}});if(!n)return '';var pct=ant?dif/ant*100:0;return '<div class="r2sub">Desde a tabela anterior: <span class="'+(dif<0?'r':'g')+'">'+(dif<0?'▼':'▲')+' '+Math.abs(pct).toFixed(1).replace('.',',')+'% · '+fmt(Math.abs(dif))+'</span></div>'}
+/* ordem alfabética (padrão de todos os apps): nome do carro, depois placa */
+function _r2AZ(l){return l.slice().sort(function(a,b){var x=String(a.nome||a.modeloCRLV||'').localeCompare(String(b.nome||b.modeloCRLV||''),'pt',{sensitivity:'base',numeric:true});return x||String(a.placa||'').localeCompare(String(b.placa||''),'pt')})}
 function viewPatr(){
- var carros=carrosFabio(),tc=totalCarros(),tb=totalBens(),tp=patrimonio(),h='';
+ var carros=_r2AZ(carrosFabio()),tc=totalCarros(),tb=totalBens(),tp=patrimonio(),h='';
  h+=_r2Head('Fábio','Patrimônio');
  h+='<section class="r2card"><div class="r2lbl"><span>Total</span></div><div class="r2big">'+fmt(tp)+'</div>'+
   '<div class="r2split"><i class="r2bn" style="flex:'+Math.max(tb,0)+'"></i><i style="flex:'+Math.max(tc,0)+';background:#8FA3C2"></i></div>'+
@@ -1544,7 +1546,7 @@ function viewPatr(){
  }
  h+='</section>';
  if(GEST&&carros.length){h+=_r2Det('fabio','Ver os '+carros.length+' carros do Fábio');carros.forEach(function(c){h+=_r2Carro(c)});h+='</div></details>'}
- var meus=meusCarros();
+ var meus=_r2AZ(meusCarros());
  if(GEST){var tm=0;meus.forEach(function(c){tm+=Math.round((c.valorRef||0)*100)});
   h+=_r2Det('hudson','Frota Hudson · fora do total ('+meus.length+')');
   if(!meus.length)h+='<div class="r2sub" style="padding-top:10px">Nenhum carro na frota Hudson.</div>';
