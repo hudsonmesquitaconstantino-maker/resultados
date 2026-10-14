@@ -167,7 +167,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 .r2row:last-child{border-bottom:0}
 .r2row.tap{cursor:pointer}
 .r2rowT{font-size:16px;font-weight:600;color:var(--ink);line-height:1.3;min-width:0}
-.r2rowS{font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}
+.r2rowS{font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}.r2rowS .r,.r2sub .r{color:var(--red);font-weight:700}.r2rowS .g,.r2sub .g{color:var(--green);font-weight:700}
 .r2val{font-size:16px;font-weight:750;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
 .r2val.g{color:var(--green)}.r2val.r{color:var(--red)}
 .r2val small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
@@ -400,7 +400,7 @@ main{padding:6px 16px 8px!important;max-width:640px}
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=48; var APP_DATE='14/10/2026';
+var APP_VER=49; var APP_DATE='14/10/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1523,7 +1523,7 @@ function r2MesDet(k){
 /* ---------- PATRIMÔNIO ---------- */
 function _r2Carro(c){
  var vr=variacao(c);
- return '<div class="r2row"><div><div class="r2rowT">'+esc(c.nome||c.modeloCRLV||'')+'</div><div class="r2rowS">'+esc(c.placa||'')+(vr?' · <span class="'+(vr.pct<0?'r':'g')+'">'+(vr.pct<0?'▼':'▲')+' '+Math.abs(vr.pct).toFixed(1).replace('.',',')+'%</span> vs '+esc(vr.de):'')+'</div></div><div class="r2val">'+(c.valorRef>0?fmt(Math.round(c.valorRef*100)):'<span style="color:var(--amber)">sem FIPE</span>')+'<br><button class="r2mv" onclick="toggleMeu(\''+esc(c.placa)+'\')">Mover ↔</button></div></div>';
+ return '<div class="r2row"><div><div class="r2rowT">'+esc(c.nome||c.modeloCRLV||'')+'</div><div class="r2rowS">'+esc(c.placa||'')+(vr?' · <span class="'+(vr.pct<0?'r':'g')+'">'+(vr.pct<0?'▼':'▲')+' '+Math.abs(vr.pct).toFixed(1).replace('.',',')+'% · '+(vr.pct<0?'−':'+')+fmt(Math.abs(vr.dif))+'</span> vs '+esc(vr.de):'')+'</div></div><div class="r2val">'+(c.valorRef>0?fmt(Math.round(c.valorRef*100)):'<span style="color:var(--amber)">sem FIPE</span>')+'<br><button class="r2mv" onclick="toggleMeu(\''+esc(c.placa)+'\')">Mover ↔</button></div></div>';
 }
 function _r2Var(lista){var ant=0,dif=0,n=0;lista.forEach(function(c){var r=snap()[norPlaca(c.placa)],v=variacao(c);if(r&&r.antV&&v){ant+=r.antV;dif+=v.dif;n++}});if(!n)return '';var pct=ant?dif/ant*100:0;return '<div class="r2sub">Desde a tabela anterior: <span class="'+(dif<0?'r':'g')+'">'+(dif<0?'▼':'▲')+' '+Math.abs(pct).toFixed(1).replace('.',',')+'% · '+fmt(Math.abs(dif))+'</span></div>'}
 function viewPatr(){
