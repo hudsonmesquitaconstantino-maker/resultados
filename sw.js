@@ -1,6 +1,6 @@
-/* resultados — Service Worker seguro v52
+/* resultados — Service Worker seguro v53
    Navegação/index.html: NETWORK-FIRST; cache apenas fallback offline. */
-const CACHE='guimas-resultados-shell-v52';
+const CACHE='guimas-resultados-shell-v53';
 const PREFIX='guimas-resultados-shell-v';
 const INDEX=new URL('./index.html',self.registration.scope).href;
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const c=await caches.open(CACHE);try{const r=await fetch(INDEX,{cache:'no-store'});if(r&&r.ok)await c.put(INDEX,r.clone())}catch(e){}await self.skipWaiting()})())});
