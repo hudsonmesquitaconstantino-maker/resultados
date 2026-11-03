@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Resultado">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" sizes="512x512" href="icone.png">
@@ -570,7 +570,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=69; var APP_DATE='03/11/2026';
+var APP_VER=70; var APP_DATE='03/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -2458,6 +2458,87 @@ var PIX_CFG={"sel": "#msGanho,#msDesp,#mdVal,#bmVal,input.vl", "teclado": true};
 
 </script>
 <style id="modoEscuro">
+/* camada automática: toda regra clara do app ganha a versão escura */
+header{background-color:rgba(44,44,46,0.92);border-bottom-color:#3A3A3C}
+.menubtn{background-color:rgba(28,28,30,0.90)}
+.syncpill{background-color:#2C2C2E;border-color:#3A3A3C}
+.syncpill.on{border-color:rgba(48,209,88,.40)}
+.syncpill.wait{color:#FFB340;border-color:rgba(255,179,64,.40)}
+.tabs{background-color:#2C2C2E}
+.tabs button{color:#A1A1A8}
+.tabs button.sel{background-color:#1C1C1E}
+.financeRow .label,.lin .n{color:#F5F5F7}
+.totalRow,.tot{border-top-color:#3A3A3C}
+.chip{background-color:#2C2C2E;color:#A1A1A8}
+.detailsCard summary{color:#A1A1A8}
+.cashPoint .day{background-color:#2C2C2E;color:#A1A1A8}
+.alertBox{color:#30D158;border-color:rgba(48,209,88,.40)}
+.alertBox.bad{color:#FF695E;border-color:rgba(255,105,94,.40)}
+.mv{background-color:#2C2C2E;color:#A1A1A8}
+.item input{background-color:#1C1C1E}
+.item input:focus{background-color:#1C1C1E;border-color:rgba(100,168,255,.40)}
+.addLine{border-color:#3A3A3C;background-color:#1C1C1E;color:#A1A1A8}
+.addLine:active{background-color:#2C2C2E}
+.sourceWarning{border-color:rgba(255,179,64,.40);color:#FFB340}
+.sheet{background-color:#1C1C1E}
+.sheet:before{background-color:#3A3A3C}
+.sheet .close{border-color:#3A3A3C;background-color:#2C2C2E;color:#F5F5F7}
+.lbl{color:#A1A1A8}
+.field,textarea.field{border-color:#3A3A3C;background-color:#1C1C1E}
+.field:focus,textarea.field:focus{background-color:#1C1C1E;border-color:rgba(100,168,255,.40)}
+.btn{background-color:#1C1C1E}
+.btn.ghost{background-color:#2C2C2E}
+.btn.danger{border-color:rgba(255,105,94,.40)}
+.menu button{background-color:#1C1C1E}
+.r2nav{background-color:rgba(28,28,30,0.88)}
+.r2prog{background-color:#2C2C2E}
+.r2barL{background-color:#2C2C2E}
+.r2dia .d{background-color:#2C2C2E;color:#A1A1A8}
+.r2alerta.bad{color:#FF695E}
+.r2alerta.ok{color:#30D158}
+.r2chip{background-color:#2C2C2E;color:#A1A1A8}
+.r2eq span{color:#A1A1A8}
+.r2eq.tot{border-top-color:#3A3A3C}
+.r2col .up{border-bottom-color:#3A3A3C}
+.r2warn{color:#FFB340}
+.r2mv{background-color:#2C2C2E;color:#A1A1A8}
+.sheet .r2eq span{color:#A1A1A8}
+.pcAbas{background-color:#2C2C2E}
+.pcAbas button{color:#A1A1A8}
+.pcAbas button.on{background-color:#1C1C1E;color:#F5F5F7}
+.pcPer button{border-color:#3A3A3C;background-color:#1C1C1E;color:#A1A1A8}
+.pcAlerta{color:#FF695E;background-color:#2C2C2E}
+.pcBar{background-color:#2C2C2E}
+.pcInfo{color:#FFB340;background-color:rgba(255,179,64,.16)}
+.pcFrase{color:#A1A1A8}
+.pcFrase2{color:#A1A1A8}
+.pcSem .r{background-color:rgba(255,105,94,.16);color:#FF695E}
+.pcSem .a{background-color:rgba(255,179,64,.16);color:#FFB340}
+.pcSem .g{background-color:#2C2C2E;color:#30D158}
+.pcPq{color:#A1A1A8}
+.pcVal.r b{color:#FF695E}
+.pcVal.a b{color:#FFB340}
+.pcVal.g b{color:#30D158}
+.pcTag.r{background-color:rgba(255,105,94,.16);color:#FF695E}
+.pcTag.a{background-color:rgba(255,179,64,.16);color:#FFB340}
+.pcTag.g{background-color:#2C2C2E;color:#30D158}
+.pcEx{background-color:#2C2C2E}
+.pcEx p{color:#F5F5F7}
+.pcConta2{color:#A1A1A8}
+.pcConta2 b.g{color:#30D158}
+.pcConta2 b.r{color:#FF695E}
+.pcSplit{background-color:#2C2C2E}
+.pcPct{color:#A1A1A8}
+.pcMargem{color:#A1A1A8}
+.pcMargem b{color:#30D158}
+.pcPq b.g{color:#30D158}
+.pcPq b.r{color:#FF695E}
+html.af body>header.afHead{background-color:rgba(44,44,46,0.82)!important}
+.syncpill{background-color:rgba(28,28,30,0.85)!important}
+html.af body>.afBar{background-color:rgba(28,28,30,0.74)!important}
+.bottombar .btn.ghost,.bottom .menuBtn{background-color:#1C1C1E!important}
+.g21segmk{background-color:#1C1C1E}
+
 /* ===================== MODO ESCURO (padrão iPhone) — Hudson 03/11/2026 =====================
    Camada única no fim do app: só cor, fundo e sombra. Não mexe em dado, função nem layout.
    Paleta igual em todos os apps: fundo preto, cartões #1C1C1E, campos #2C2C2E, texto branco/cinza, âmbar, verde, vermelho do iOS. */
