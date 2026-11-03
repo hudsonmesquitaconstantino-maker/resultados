@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Resultado">
-<meta name="theme-color" content="#1B2A4A">
+<meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" sizes="512x512" href="icone.png">
 <title>Resultado</title>
 <style>
@@ -570,7 +570,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=68; var APP_DATE='02/11/2026';
+var APP_VER=69; var APP_DATE='03/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -2457,5 +2457,51 @@ var PIX_CFG={"sel": "#msGanho,#msDesp,#mdVal,#bmVal,input.vl", "teclado": true};
 })();
 
 </script>
+<style id="modoEscuro">
+/* ===================== MODO ESCURO (padrão iPhone) — Hudson 03/11/2026 =====================
+   Camada única no fim do app: só cor, fundo e sombra. Não mexe em dado, função nem layout.
+   Paleta igual em todos os apps: fundo preto, cartões #1C1C1E, campos #2C2C2E, texto branco/cinza, âmbar, verde, vermelho do iOS. */
+:root:is(#escA,html):not(.gsplPre),:root:is(#escA,html):not(.gsplPre) body:is(#escB,body){background:#000!important;color:#F5F5F7}
+:root:is(#escA,html) body:is(#escB,body) input,:root:is(#escA,html) body:is(#escB,body) select,:root:is(#escA,html) body:is(#escB,body) textarea{color:#F5F5F7!important;border-color:#3A3A3C!important;caret-color:#F0A02E}
+:root:is(#escA,html) body:is(#escB,body) input::placeholder,:root:is(#escA,html) body:is(#escB,body) textarea::placeholder{color:#6E6E76!important}
+:root:is(#escA,html) body:is(#escB,body) input[type=date]::-webkit-calendar-picker-indicator,:root:is(#escA,html) body:is(#escB,body) input[type=month]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7}
+/* placa continua placa de verdade: branca, letra preta, faixa azul */
+:root:is(#escA,html) body:is(#escB,body) .plate{background:#F2F2F2!important;border-color:#1b1d22!important}
+:root:is(#escA,html) body:is(#escB,body) .plate b,:root:is(#escA,html) body:is(#escB,body) .plate .num,:root:is(#escA,html) body:is(#escB,body) .plate input{color:#111!important;background:transparent!important}
+:root:is(#escA,html) body:is(#escB,body) .plate i,:root:is(#escA,html) body:is(#escB,body) .plate .top{background:#174A8C!important;color:#fff!important}
+:root:is(#escA,html) body:is(#escB,body) .pl{background:#F2F2F2!important;color:#111!important;border-color:#1b1d22!important}
+
+:root{color-scheme:dark;--bg:#000000;--surface:#1C1C1E;--surface2:#2C2C2E;--ink:#F5F5F7;--muted:#A1A1A8;--line:#2C2C2E;--line2:#232326;
+ --green:#30D158;--green-bg:rgba(48,209,88,.14);--red:#FF6B5E;--red-bg:rgba(255,69,58,.14);--blue:#0A84FF;--blue2:#3A3A3C;--amber:#F0A02E;--amber-bg:rgba(240,160,46,.14);
+ --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 28px rgba(0,0,0,.5);--shadow-soft:0 4px 14px rgba(0,0,0,.4);
+ --g21sh:inset 0 1px 0 rgba(255,255,255,.05),0 10px 28px rgba(0,0,0,.5);--g21bg:#000000}
+:root:is(#escA,html) body:is(#escB,body) .sourceWarning,:root:is(#escA,html) body:is(#escB,body) .sourceWarning b{background:rgba(240,160,46,.12)!important;color:#FFC46B!important;border-color:rgba(240,160,46,.3)!important}
+:root:is(#escA,html) body:is(#escB,body) .sourceWarning b{background:none!important}
+:root:is(#escA,html) body:is(#escB,body) .r2barL,:root:is(#escA,html) body:is(#escB,body) .r2prog{background:#2C2C2E!important}
+:root:is(#escA,html) body:is(#escB,body) .menubtn,:root:is(#escA,html) body:is(#escB,body) .r2dia .d,:root:is(#escA,html) body:is(#escB,body) .r2chip{background:#2C2C2E!important;color:#F5F5F7!important;border-color:#3A3A3C!important}
+:root:is(#escA,html) body:is(#escB,body) .r2chip,:root:is(#escA,html) body:is(#escB,body) .r2eq>span,:root:is(#escA,html) body:is(#escB,body) .sheet .lbl,:root:is(#escA,html) body:is(#escB,body) b>span.g,:root:is(#escA,html) body:is(#escB,body) b>span.r{color:#A1A1A8!important}
+:root:is(#escA,html) body:is(#escB,body) .r2col .up,:root:is(#escA,html) body:is(#escB,body) .r2eq.tot{border-color:#3A3A3C!important}
+:root:is(#escA,html) body:is(#escB,body) .r2alerta.ok{background:rgba(48,209,88,.12)!important;color:#30D158!important}
+
+:root:is(#escA,html) body:is(#escB,body) .card,:root:is(#escA,html) body:is(#escB,body) .histItem,:root:is(#escA,html) body:is(#escB,body) .sheet,:root:is(#escA,html) body:is(#escB,body) .menu{background:#1C1C1E!important;border-color:#2C2C2E!important}
+:root:is(#escA,html) body:is(#escB,body) .sheet{background:#0E0E10!important}
+:root:is(#escA,html) body:is(#escB,body) .histItem,:root:is(#escA,html) body:is(#escB,body) .menu>button{background:#1C1C1E!important}
+:root:is(#escA,html) body:is(#escB,body) .sheet .histItem{background:#1C1C1E!important}
+:root:is(#escA,html) body:is(#escB,body) .menu>button,:root:is(#escA,html) body:is(#escB,body) .btn.ghost,:root:is(#escA,html) body:is(#escB,body) .mini,:root:is(#escA,html) body:is(#escB,body) .acts>button.mini,:root:is(#escA,html) body:is(#escB,body) .filterbar>button{background:#2C2C2E!important;color:#F5F5F7!important;border-color:#3A3A3C!important}
+:root:is(#escA,html) body:is(#escB,body) .sheet>button.close{background:#2C2C2E!important;color:#F5F5F7!important}
+:root:is(#escA,html) body:is(#escB,body) .entry>button.st.part{background:rgba(240,160,46,.16)!important;border-color:rgba(240,160,46,.35)!important}
+:root:is(#escA,html) body:is(#escB,body) header.afHead,:root:is(#escA,html) body:is(#escB,body) .afHead{background:rgba(0,0,0,.82)!important;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-color:rgba(255,255,255,.08)!important}
+:root:is(#escA,html) body:is(#escB,body) .periodLine{background:#1C1C1E!important;border-color:#2C2C2E!important}
+:root:is(#escA,html) body:is(#escB,body) .syncpill,:root:is(#escA,html) body:is(#escB,body) .lockpill{background:#2C2C2E!important;color:#A1A1A8!important;border-color:#3A3A3C!important}
+:root:is(#escA,html) body:is(#escB,body) .bottombar,:root:is(#escA,html) body:is(#escB,body) .afBar{background:rgba(28,28,30,.86)!important;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-color:rgba(255,255,255,.08)!important}
+:root:is(#escA,html) body:is(#escB,body) pre.preview,:root:is(#escA,html) body:is(#escB,body) #whatsText{background:#1C1C1E!important;color:#F5F5F7!important;border-color:#2C2C2E!important}
+:root:is(#escA,html) body:is(#escB,body) .askMsg,:root:is(#escA,html) body:is(#escB,body) .askMsg b{color:#A1A1A8!important}
+:root:is(#escA,html) body:is(#escB,body) .card input,:root:is(#escA,html) body:is(#escB,body) .card textarea{background:transparent!important;border-color:transparent!important}
+:root:is(#escA,html) body:is(#escB,body) .sheet input,:root:is(#escA,html) body:is(#escB,body) .sheet textarea,:root:is(#escA,html) body:is(#escB,body) .sheet select{background:#2C2C2E!important}
+/* placa continua placa: branca com letra preta */
+:root:is(#escA,html) body:is(#escB,body) .plate,:root:is(#escA,html) body:is(#escB,body) .card .plate input{background:#F2F2F2!important;color:#111!important}
+:root:is(#escA,html) body:is(#escB,body) .plate .bar{background:#174A8C!important}
+
+</style>
 </body>
 </html>
