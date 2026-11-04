@@ -237,6 +237,11 @@ main{padding:6px 16px 8px!important;max-width:640px}
 .pcPer{display:flex;gap:6px;margin:0 0 12px}
 .pcPer button{flex:1;min-width:0;padding:0 4px;border:1px solid #DCDFE4;background:#fff;border-radius:999px;min-height:34px;font:600 13px -apple-system,system-ui,sans-serif;color:#4B515A}
 .pcPer button.on{background:#1C1C1E;border-color:#1C1C1E;color:#fff}
+.pcMes{display:flex;gap:6px;align-items:center;overflow-x:auto;margin:-4px 0 12px;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pcMes::-webkit-scrollbar{display:none}
+.pcMes span{flex:0 0 auto;font:600 12.5px -apple-system,system-ui,sans-serif;color:var(--muted);margin-right:2px}
+.pcMes button{flex:0 0 auto;padding:0 12px;border:1px solid #DCDFE4;background:#fff;border-radius:999px;min-height:32px;font:600 13px -apple-system,system-ui,sans-serif;color:#4B515A}
+.pcMes button.on{background:#1C1C1E;border-color:#1C1C1E;color:#fff}
 .pcAlerta{margin-top:10px;font-size:13.5px;font-weight:700;color:#B33A33;background:#FDEDEC;border-radius:8px;padding:8px 10px}
 .pcLista{padding-top:4px;padding-bottom:4px}
 .pcRow{align-items:center}.pcTx{min-width:0}
@@ -570,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=72; var APP_DATE='03/11/2026';
+var APP_VER=73; var APP_DATE='03/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1878,19 +1883,22 @@ function _pcInicio(){
 function pcDados(){
  var hojeD=new Date();hojeD=new Date(hojeD.getFullYear(),hojeD.getMonth(),hojeD.getDate());
  var inicio=_pcInicio()||somaDias(hojeD,-30),desde=inicio;
+ var ate=hojeD;
  if(PC.per==='30')desde=somaDias(hojeD,-30);else if(PC.per==='90')desde=somaDias(hojeD,-90);else if(PC.per==='365')desde=somaDias(hojeD,-365);
+ /* v73 (Hudson 03/11): um mês escolhido ("m:2026-09") — do dia 1 ao último dia daquele mês (ou até hoje, se for o mês atual) */
+ else if(/^m:\d{4}-\d{2}$/.test(PC.per)){var _y=+PC.per.slice(2,6),_m=+PC.per.slice(7,9)-1;desde=new Date(_y,_m,1);ate=new Date(_y,_m+1,0);if(ate>hojeD)ate=hojeD}
  if(desde<inicio)desde=inicio;
  var mapa={},lista=[];
  todosCarros().forEach(function(c){var k=norPlaca(c.placa);if(!k||mapa[k])return;mapa[k]={c:c,k:k,rec:0,man:0,desp:0,nMan:0,sem:{},manut:[],contas:[]};lista.push(mapa[k])});
  var semPlaca=0;
  function addRec(d,quando,chave){var k=norPlaca(d&&d.plate);var t=0;toArr(d&&d.entries).forEach(function(e){if(e&&!e.del&&e.s==='paid')t+=(Number(e.v)||0)});if(!t)return;if(mapa[k]){mapa[k].rec+=t;mapa[k].sem[chave]=1}else semPlaca+=t}
  if(SEM){
-  toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(!p||p.fim<desde)return;toArr(w.drivers).forEach(function(d){if(d&&!d.del)addRec(d,p.fim,chaveDia(p.fim))})});
-  toArr(SEM.drivers).forEach(function(d){if(d&&!d.del)addRec(d,hojeD,'aberta')});
+  toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(!p||p.fim<desde||p.fim>ate)return;toArr(w.drivers).forEach(function(d){if(d&&!d.del)addRec(d,p.fim,chaveDia(p.fim))})});
+  if(ate>=hojeD)toArr(SEM.drivers).forEach(function(d){if(d&&!d.del)addRec(d,hojeD,'aberta')});
  }
  if(GEST&&GEST.manutencoes){
   Object.keys(GEST.manutencoes).forEach(function(id){var m=GEST.manutencoes[id];if(!m)return;var k=norPlaca(m.carro);if(!mapa[k])return;
-   var d=_pcISO(m.dataFim||m.dataIni);if(!d||d<desde)return;
+   var d=_pcISO(m.dataFim||m.dataIni);if(!d||d<desde||d>ate)return;
    var v=0;toArr(m.pecas).forEach(function(p){if(p&&!p.pendenteFinanceiro)v+=Number(p.valor)||0});toArr(m.blocos).forEach(function(b){if(b&&!b.pendenteFinanceiro)v+=Number(b.valor)||0});
    v=Math.round(v*100);if(!v)return;
    /* v64 (28/10/2026): só a NOSSA parte da manutenção. Quem pagou vem do Gestão (divMot: 0 nossa · 50 meio a meio · 100 motorista);
@@ -1904,7 +1912,7 @@ function pcDados(){
   /* v72 (Hudson 03/11): só SEGURO (categoria "Seguros" do Despesas) e só o que já venceu dentro do período.
      Antes entrava qualquer conta com a placa no nome e as contas do mês que ainda vão vencer — no "1 mês"
      somava o seguro de outubro E o de novembro (que ainda não venceu), quase o dobro. */
-  var addDesp=function(it,mesLabel){if(!it||it.del)return;if(String(it.cat||'')!=='seguro')return;var l=limitesMesLabel(mesLabel);if(!l)return;var d=new Date(l.ini.getFullYear(),l.ini.getMonth(),Math.min(l.fim.getDate(),parseInt(it.day,10)||1));if(d<desde||d>hojeD)return;
+  var addDesp=function(it,mesLabel){if(!it||it.del)return;if(String(it.cat||'')!=='seguro')return;var l=limitesMesLabel(mesLabel);if(!l)return;var d=new Date(l.ini.getFullYear(),l.ini.getMonth(),Math.min(l.fim.getDate(),parseInt(it.day,10)||1));if(d<desde||d>ate||d>hojeD)return;
    var txt=norPlaca(it.desc);for(var i=0;i<chaves.length;i++){if(txt.indexOf(chaves[i])>=0){var x=mapa[chaves[i]];x.desp+=(Number(it.v)||0);x.contas.push({d:d,v:Number(it.v)||0,t:it.desc});return}}};
   toArr(DESP.history).filter(function(h){return h&&!h.del}).forEach(function(h){toArr(h.items).forEach(function(it){addDesp(it,h.month)})});
   var atual=String(DESP.month||'').toUpperCase();toArr(DESP.items).forEach(function(it){if(it&&(!it.mes||String(it.mes).toUpperCase()===atual))addDesp(it,atual)});
@@ -1912,13 +1920,13 @@ function pcDados(){
  var despIni=null;if(DESP)toArr(DESP.history).filter(function(h){return h&&!h.del}).forEach(function(h){var l=limitesMesLabel(h.month);if(l&&(!despIni||l.ini<despIni))despIni=l.ini});
  if(!despIni&&DESP){var la=limitesMesLabel(DESP.month);if(la)despIni=la.ini}
  lista.forEach(function(x){x.lucro=x.rec-x.man-x.desp;x.nSem=Object.keys(x.sem).length});
- var dias=Math.max(1,Math.round((hojeD-desde)/86400000)+1);
- return {lista:lista,desde:desde,inicio:inicio,dias:dias,semPlaca:semPlaca,despIni:despIni};
+ var dias=Math.max(1,Math.round((ate-desde)/86400000)+1);
+ return {lista:lista,desde:desde,ate:ate,inicio:inicio,dias:dias,semPlaca:semPlaca,despIni:despIni};
 }
-function _pcSemanasPeriodo(desde){
- var n=0;if(!SEM)return 1;
- toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(p&&p.fim>=desde)n++});
- if(toArr(SEM.drivers).some(function(d){return d&&!d.del}))n++;
+function _pcSemanasPeriodo(desde,ate){
+ var n=0;if(!SEM)return 1;var hj=new Date();hj=new Date(hj.getFullYear(),hj.getMonth(),hj.getDate());ate=ate||hj;
+ toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(p&&p.fim>=desde&&p.fim<=ate)n++});
+ if(ate>=hj&&toArr(SEM.drivers).some(function(d){return d&&!d.del}))n++;
  return Math.max(1,n);
 }
 function _pcDiasOficina(x,desde){
@@ -1927,7 +1935,7 @@ function _pcDiasOficina(x,desde){
 /* v64 (28/10/2026, pedido do Hudson: "tá muito confuso de entender"): uma lista só, do pior para o melhor.
    Cada carro: quanto ENTROU, quanto GASTOU (só a nossa parte da manutenção + seguro) e o LUCRO. Sem "por semana" e sem média da frota. */
 function pcAnalise(){
- var D=pcDados(),sem=_pcSemanasPeriodo(D.desde);
+ var D=pcDados(),sem=_pcSemanasPeriodo(D.desde,D.ate);
  var ls=D.lista.filter(function(x){return x.c.status!=='pessoal'&&!ehMeu(x.c)});
  ls.forEach(function(x){x.gasto=x.man+x.desp;x.semSem=Math.max(0,sem-x.nSem);x.diasOf=_pcDiasOficina(x,D.desde);x.cor=x.lucro<0?'r':'g'});
  D.ls=ls;D.sem=sem;return D;
@@ -1945,9 +1953,13 @@ function viewCarros(){
  if(!GEST||!SEM){h+='<section class="r2card"><div class="r2sub">Aguardando os dados do Gestão e do Semanal…</div></section>';return h}
  var D=pcAnalise(),ls=D.ls,mesIni=_r2Cap(MESES[D.inicio.getMonth()]);
  h+='<div class="pcPer">'+[['30','1 mês'],['90','3 meses'],['365','1 ano'],['tudo','Desde '+mesIni.toLowerCase()]].map(function(o){return '<button class="'+(PC.per===o[0]?'on':'')+'" onclick="pcSet(\'per\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
+ /* v73: ou um mês fechado, para consultar só aquele mês */
+ var _ms=[],_hj=new Date(),_c=new Date(D.inicio.getFullYear(),D.inicio.getMonth(),1);while(_c<=_hj&&_ms.length<36){_ms.push(_c.getFullYear()+'-'+('0'+(_c.getMonth()+1)).slice(-2));_c=new Date(_c.getFullYear(),_c.getMonth()+1,1)}
+ h+='<div class="pcMes"><span>Ou só um mês:</span>'+_ms.reverse().map(function(k){var mi=+k.slice(5,7)-1,lb=_r2Cap(MESES[mi]).slice(0,3)+(k.slice(0,4)!==String(_hj.getFullYear())?'/'+k.slice(2,4):'');return '<button class="'+(PC.per==='m:'+k?'on':'')+'" onclick="pcSet(\'per\',\'m:'+k+'\')">'+lb+'</button>'}).join('')+'</div>';
  var tl=0,tr=0,tm=0,td=0,tmt=0;ls.forEach(function(x){tl+=x.lucro;tr+=x.rec;tm+=x.man;td+=x.desp;tmt+=(x.manTot||0)});
  var nR=ls.filter(function(x){return x.lucro<0}).length,nG=ls.length-nR;
- var per=PC.per==='30'?'no último mês':PC.per==='90'?'nos últimos 3 meses':PC.per==='365'?'no último ano':'desde '+fmtDia(D.desde)+'/'+D.desde.getFullYear();
+ var _pm=/^m:/.test(PC.per)?MESES[D.desde.getMonth()].toLowerCase()+' de '+D.desde.getFullYear():'';
+ var per=PC.per==='30'?'no último mês':PC.per==='90'?'nos últimos 3 meses':PC.per==='365'?'no último ano':_pm?'em '+_pm+(D.ate<new Date(D.desde.getFullYear(),D.desde.getMonth()+1,0)?' (até hoje)':''):'desde '+fmtDia(D.desde)+'/'+D.desde.getFullYear();
  h+='<section class="r2card pcHero2"><div class="pcFrase">'+_r2Cap(per)+' a frota deu</div>'+
   '<div class="r2big '+_r2Cls(tl)+'">'+fmt(tl)+'</div>'+
   (tr>0?'<div class="pcMargem">'+(tl>=0?'<b>'+fmtPct(tl/tr*100)+'</b> do que os motoristas pagaram ficou de lucro':'prejuízo de <b>'+fmtPct(-tl/tr*100)+'</b> sobre o que os motoristas pagaram')+'</div>':'')+
@@ -1973,7 +1985,8 @@ function pcDet(k){
  var D=pcAnalise(),x=D.ls.filter(function(y){return y.k===k})[0];if(!x)return;var c=x.c;
  var h='<h3>'+esc(c.nome||'')+' · '+esc(c.placa||'')+'</h3><div class="pcTag '+x.cor+'"><span class="pcDot '+x.cor+'"></span>'+(x.lucro<0?'No prejuízo':'Dando lucro')+'</div>';
  h+='<div class="r2big '+_r2Cls(x.lucro)+'" style="font-size:32px;margin-top:10px">'+fmt(x.lucro)+'</div>';
- h+='<div class="r2sub" style="margin-bottom:12px">de '+fmtDia(D.desde)+'/'+D.desde.getFullYear()+' até hoje ('+D.sem+' semana'+(D.sem>1?'s':'')+').</div>';
+ var _hoje0=new Date();_hoje0=new Date(_hoje0.getFullYear(),_hoje0.getMonth(),_hoje0.getDate());
+ h+='<div class="r2sub" style="margin-bottom:12px">de '+fmtDia(D.desde)+'/'+D.desde.getFullYear()+' até '+(D.ate>=_hoje0?'hoje':fmtDia(D.ate)+'/'+D.ate.getFullYear())+' ('+D.sem+' semana'+(D.sem>1?'s':'')+').</div>';
  var ex=[];
  ex.push('O motorista pagou <b>'+x.nSem+' de '+D.sem+' semana'+(D.sem>1?'s':'')+'</b>'+(x.semSem?' — <b>'+x.semSem+' sem pagamento</b>':'')+'.');
  if(x.nMan)ex.push('Teve <b>'+x.nMan+' manutenç'+(x.nMan>1?'ões':'ão')+'</b>: a nossa parte foi <b>'+fmt(x.man)+'</b>'+((x.manTot||0)>x.man?' (de '+fmt(x.manTot)+' no total)':'')+(x.diasOf?', e o carro ficou <b>'+x.diasOf+' dias na oficina</b>':'')+'.');
@@ -2510,6 +2523,9 @@ header{background-color:rgba(44,44,46,0.92);border-bottom-color:#3A3A3C}
 .pcAbas button{color:#A1A1A8}
 .pcAbas button.on{background-color:#1C1C1E;color:#F5F5F7}
 .pcPer button{border-color:#3A3A3C;background-color:#1C1C1E;color:#A1A1A8}
+.pcPer button.on{background-color:#F5F5F7;color:#111111;border-color:#F5F5F7}
+.pcMes button{border-color:#3A3A3C;background-color:#1C1C1E;color:#A1A1A8}
+.pcMes button.on{background-color:#F5F5F7;color:#111111;border-color:#F5F5F7}
 .pcAlerta{color:#FF695E;background-color:#2C2C2E}
 .pcBar{background-color:#2C2C2E}
 .pcInfo{color:#FFB340;background-color:rgba(255,179,64,.16)}
