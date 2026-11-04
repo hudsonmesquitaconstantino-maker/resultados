@@ -570,7 +570,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=71; var APP_DATE='03/11/2026';
+var APP_VER=72; var APP_DATE='03/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1901,7 +1901,10 @@ function pcDados(){
  }
  if(DESP){
   var chaves=lista.map(function(x){return x.k});
-  var addDesp=function(it,mesLabel){if(!it||it.del)return;var l=limitesMesLabel(mesLabel);if(!l)return;var d=new Date(l.ini.getFullYear(),l.ini.getMonth(),Math.min(28,parseInt(it.day,10)||1));if(d<desde)return;
+  /* v72 (Hudson 03/11): só SEGURO (categoria "Seguros" do Despesas) e só o que já venceu dentro do período.
+     Antes entrava qualquer conta com a placa no nome e as contas do mês que ainda vão vencer — no "1 mês"
+     somava o seguro de outubro E o de novembro (que ainda não venceu), quase o dobro. */
+  var addDesp=function(it,mesLabel){if(!it||it.del)return;if(String(it.cat||'')!=='seguro')return;var l=limitesMesLabel(mesLabel);if(!l)return;var d=new Date(l.ini.getFullYear(),l.ini.getMonth(),Math.min(l.fim.getDate(),parseInt(it.day,10)||1));if(d<desde||d>hojeD)return;
    var txt=norPlaca(it.desc);for(var i=0;i<chaves.length;i++){if(txt.indexOf(chaves[i])>=0){var x=mapa[chaves[i]];x.desp+=(Number(it.v)||0);x.contas.push({d:d,v:Number(it.v)||0,t:it.desc});return}}};
   toArr(DESP.history).filter(function(h){return h&&!h.del}).forEach(function(h){toArr(h.items).forEach(function(it){addDesp(it,h.month)})});
   var atual=String(DESP.month||'').toUpperCase();toArr(DESP.items).forEach(function(it){if(it&&(!it.mes||String(it.mes).toUpperCase()===atual))addDesp(it,atual)});
@@ -1962,7 +1965,7 @@ function viewCarros(){
    '<div class="pcSplit"><i class="g" style="width:'+pg+'%"></i><i class="r" style="width:'+(100-pg)+'%"></i></div></div>'+
    '<div class="pcVal '+x.cor+'"><b>'+fmt(x.lucro)+'</b><small>'+esc(_pcMotivo(x,D))+'</small></div></div>'});
  h+='</section>';
- h+='<div class="r2sub pcNota">Entrou = o que o motorista da placa pagou no Semanal. Gastou = a nossa parte das manutenções do Gestão (meio a meio conta a metade; 100% do motorista não conta) + o seguro da placa no app Despesas.'+(D.despIni&&D.despIni>D.desde?' Seguros só a partir de '+_r2Cap(MESES[D.despIni.getMonth()]).toLowerCase()+'/'+D.despIni.getFullYear()+'.':'')+' Carros pessoais e a frota do Hudson não entram.</div>';
+ h+='<div class="r2sub pcNota">Entrou = o que o motorista da placa pagou no Semanal. Gastou = a nossa parte das manutenções do Gestão (meio a meio conta a metade; 100% do motorista não conta) + o seguro da placa no app Despesas (categoria Seguros, só o que já venceu no período).'+(D.despIni&&D.despIni>D.desde?' Seguros só a partir de '+_r2Cap(MESES[D.despIni.getMonth()]).toLowerCase()+'/'+D.despIni.getFullYear()+'.':'')+' Carros pessoais e a frota do Hudson não entram.</div>';
  return h;
 }
 function pcVai(id){var e=document.getElementById(id);if(e)try{e.scrollIntoView({behavior:'smooth',block:'start'})}catch(x){e.scrollIntoView()}}
@@ -2584,6 +2587,9 @@ html.af body>.afBar{background-color:rgba(28,28,30,0.74)!important}
 /* placa continua placa: branca com letra preta */
 :root:is(#escA,html) body:is(#escB,body) .plate,:root:is(#escA,html) body:is(#escB,body) .card .plate input{background:#F2F2F2!important;color:#111!important}
 :root:is(#escA,html) body:is(#escB,body) .plate .bar{background:#174A8C!important}
+
+/* topo sólido: no iPhone o vidro fosco do topo deixava o título e o "sincronizado" borrados */
+:root:is(#escA,html) body:is(#escB,body) header,:root:is(#escA,html) body:is(#escB,body) header.afHead,:root:is(#escA,html) body:is(#escB,body)>header{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#000!important}
 
 </style>
 </body>
