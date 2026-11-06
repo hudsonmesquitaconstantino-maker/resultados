@@ -575,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=74; var APP_DATE='05/11/2026';
+var APP_VER=75; var APP_DATE='05/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -2613,6 +2613,14 @@ html.af body>.afBar{background-color:rgba(28,28,30,0.74)!important}
 :root:is(#escA,html) body:is(#escB,body) nav.r2nav.afBar,:root:is(#escA,html) body:is(#escB,body) nav.r2nav{width:auto!important;max-width:none!important;transform:none!important;left:14px!important;right:14px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important;height:64px!important;padding:6px!important;border-radius:32px!important;background:rgba(36,36,40,.72)!important;-webkit-backdrop-filter:blur(22px) saturate(180%)!important;backdrop-filter:blur(22px) saturate(180%)!important;border:.5px solid rgba(255,255,255,.14)!important;box-shadow:0 10px 30px rgba(0,0,0,.45)!important;gap:2px}
 :root:is(#escA,html) body:is(#escB,body) nav.r2nav button{border-radius:26px!important;color:#C7C7CC!important;padding:4px 0!important}
 :root:is(#escA,html) body:is(#escB,body) nav.r2nav button[aria-current="page"],:root:is(#escA,html) body:is(#escB,body) nav.r2nav button.on,:root:is(#escA,html) body:is(#escB,body) nav.r2nav button.ativo{background:rgba(255,255,255,.12)!important;color:#5BB7FF!important}
+
+/* teclado aberto: esconde a barra flutuante */
+:root:is(#escA,html).tecladoAberto body:is(#escB,body) nav.r2nav,:root:is(#escA,html).tecladoAberto body:is(#escB,body) nav.r2nav.afBar{display:none!important}
 </style>
+<script id="tecladoBarra">/* Hudson 06/11: com o teclado aberto, a barra flutuante de baixo some (não cobre o que você está digitando) */
+(function(){var R=document.documentElement;function campo(e){if(!e)return false;var t=e.tagName;if(t==='TEXTAREA'||t==='SELECT'||e.isContentEditable)return true;return t==='INPUT'&&!/^(button|submit|reset|checkbox|radio|range|color|file|image|hidden)$/i.test(e.type||'')}
+function upd(){var vv=window.visualViewport,kb=vv?(window.innerHeight-vv.height*vv.scale>140):false;R.classList.toggle('tecladoAberto',campo(document.activeElement)||kb)}
+document.addEventListener('focusin',upd,true);document.addEventListener('focusout',function(){setTimeout(upd,150)},true);if(window.visualViewport)window.visualViewport.addEventListener('resize',upd)})();
+</script>
 </body>
 </html>
