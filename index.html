@@ -575,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=75; var APP_DATE='05/11/2026';
+var APP_VER=76; var APP_DATE='05/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1898,14 +1898,20 @@ function pcDados(){
  }
  if(GEST&&GEST.manutencoes){
   Object.keys(GEST.manutencoes).forEach(function(id){var m=GEST.manutencoes[id];if(!m)return;var k=norPlaca(m.carro);if(!mapa[k])return;
-   var d=_pcISO(m.dataFim||m.dataIni);if(!d||d<desde||d>ate)return;
-   var v=0;toArr(m.pecas).forEach(function(p){if(p&&!p.pendenteFinanceiro)v+=Number(p.valor)||0});toArr(m.blocos).forEach(function(b){if(b&&!b.pendenteFinanceiro)v+=Number(b.valor)||0});
-   v=Math.round(v*100);if(!v)return;
+   /* v76 (Hudson 08/11): cada item conta no mês da SUA competência, como no fechamento do Gestão e no Despesas —
+      peça na data dela (já paga e contabilizada no mês em que foi comprada), mão de obra na data do serviço.
+      Antes a manutenção inteira caía na data de fim (peças de outubro somavam em novembro). */
+   var leg=m.dataFim||m.dataIni,d=_pcISO(leg),v=0,its=[],dentro=function(x){var q=_pcISO(x);return q&&q>=desde&&q<=ate};
+   toArr(m.pecas).forEach(function(p){if(p&&!p.pendenteFinanceiro&&dentro(p.data||m.dataPecasPadrao||leg)){v+=Number(p.valor)||0;if(p.desc)its.push(p.desc)}});
+   toArr(m.blocos).forEach(function(b){if(b&&!b.pendenteFinanceiro&&dentro(b.dataFim||b.dataIni||leg)){v+=Number(b.valor)||0;var t=toArr(b.servicos).join(', ');if(t)its.push(t)}});
+   var vAll=0;toArr(m.pecas).forEach(function(p){if(p&&!p.pendenteFinanceiro)vAll+=Number(p.valor)||0});toArr(m.blocos).forEach(function(b){if(b&&!b.pendenteFinanceiro)vAll+=Number(b.valor)||0});
+   var outro=Math.round(vAll*100)!==Math.round(v*100);v=Math.round(v*100);if(!v)return;if(!d||d<desde||d>ate)d=null;
    /* v64 (28/10/2026): só a NOSSA parte da manutenção. Quem pagou vem do Gestão (divMot: 0 nossa · 50 meio a meio · 100 motorista);
       manutenção antiga sem escolha: com nome de motorista = meio a meio, sem motorista ou "GuimasCar" = 100% nossa */
    var dv=(m.divMot===0||m.divMot===50||m.divMot===100)?m.divMot:((String(m.motorista||'').trim()&&!/guimas/i.test(m.motorista))?(_pcEmVenda(m)?100:50):0);
    var vt=v;v=Math.round(vt*(100-dv)/100);mapa[k].manTot=(mapa[k].manTot||0)+vt;if(dv)mapa[k].nDiv=(mapa[k].nDiv||0)+1;
-   mapa[k].man+=v;mapa[k].nMan++;mapa[k].manut.push({d:d,v:v,vt:vt,dv:dv,ini:_pcISO(m.dataIni),fim:_pcISO(m.dataFim||m.dataIni),t:toArr(m.pecas).filter(function(p){return p&&!p.pendenteFinanceiro}).map(function(p){return p&&p.desc}).concat(toArr(m.blocos).map(function(b){return b&&toArr(b.servicos).join(', ')})).filter(Boolean).join(' · ')})});
+   var _ini=_pcISO(m.dataIni),_fim=_pcISO(m.dataFim||m.dataIni);
+   mapa[k].man+=v;mapa[k].nMan++;mapa[k].manut.push({d:d||_fim||_ini,v:v,vt:vt,dv:dv,ini:d?_ini:null,fim:d?_fim:null,parte:!d,outro:outro,t:its.join(' · ')})});
  }
  if(DESP){
   var chaves=lista.map(function(x){return x.k});
@@ -1998,7 +2004,7 @@ function pcDet(k){
  if(fipe>0&&D.sem>=4){var anual=Math.round(x.lucro/D.sem*52);h+='<div class="r2sub" style="margin-top:10px">O carro vale '+fmt(fipe)+' (FIPE). '+(anual>=0?'Nesse ritmo, dá '+fmt(anual)+' de lucro por ano — '+fmtPct(anual/fipe*100)+' do valor dele.':'Nesse ritmo, dá <b>'+fmt(-anual)+' de prejuízo por ano</b>.')+'</div>'}
  if(x.manut.length){h+='<div class="r2lbl" style="margin-top:16px"><span>Manutenções</span><span>'+x.manut.length+'</span></div>';
   x.manut.sort(function(a,b){return b.d-a.d}).slice(0,10).forEach(function(m){var q=m.dv===50?'meio a meio · total '+fmt(m.vt):m.dv===100?'100% do motorista · total '+fmt(m.vt):'100% nossa';
-   h+='<div class="r2row"><div><div class="r2rowT">'+fmtDia(m.d)+'/'+m.d.getFullYear()+(m.ini&&m.fim&&m.fim>m.ini?' · '+(Math.round((m.fim-m.ini)/86400000)+1)+' dias':'')+' · <span class="pcQuem">'+q+'</span></div><div class="r2rowS">'+esc(String(m.t||'').slice(0,90))+'</div></div><div class="r2val r">'+fmt(m.v)+'</div></div>'})}
+   h+='<div class="r2row"><div><div class="r2rowT">'+fmtDia(m.d)+'/'+m.d.getFullYear()+(m.ini&&m.fim&&m.fim>m.ini?' · '+(Math.round((m.fim-m.ini)/86400000)+1)+' dias':'')+' · <span class="pcQuem">'+q+'</span>'+(m.outro?' · <span class="pcQuem">só o que é deste período</span>':'')+'</div><div class="r2rowS">'+esc(String(m.t||'').slice(0,90))+'</div></div><div class="r2val r">'+fmt(m.v)+'</div></div>'})}
  r2Sheet(h);
 }
 
