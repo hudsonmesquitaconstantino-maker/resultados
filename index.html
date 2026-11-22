@@ -575,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=81; var APP_DATE='22/11/2026';
+var APP_VER=82; var APP_DATE='22/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1893,6 +1893,19 @@ function _pcSemanalDe(pkDe){var cs=toArr(GEST&&GEST.carros),c=null;var kk=norPla
  var ob=GEST&&GEST.carros&&!Array.isArray(GEST.carros)?GEST.carros:null;if(ob&&ob[pkDe])c=ob[pkDe];if(!c)c=cs.filter(function(x){return x&&norPlaca(x.placa)===kk})[0];
  var u=null;Object.keys((GEST&&GEST.contratos)||{}).forEach(function(id){var x=GEST.contratos[id];if(x&&norPlaca(x.carro)===kk&&(x.tipo||'locacao')==='locacao'&&(!u||String(x.inicio||'')>String(u.inicio||'')))u=x});
  var v=u&&Number(u.semanal)||0;if(!v&&c)v=Number(c.semanalPadrao)||0;return Math.round(v*100)}
+/* v82 (Hudson 22/11): o carro do motorista está na oficina por quê? Lanternagem/pintura (ele bateu) = ele continua
+   pagando a semanal do carro dele → o emprestado não ganha diária. Mecânica (motor etc.) = não cobramos o carro dele →
+   o que ele paga é do emprestado (diária). Lê as manutenções do Gestão desse período; sem manutenção lançada ainda,
+   olha quem é o fornecedor onde o carro está (pelo histórico dos serviços dele). */
+var _PC_LANT=/lantern|pint|funil|martelinho|estetic|est[eé]tica|capote/i;
+function _pcTipoOficina(pkDe,ini,fim){var ms=(GEST&&GEST.manutencoes)||{},kk=norPlaca(pkDe),tits=[];
+ var a=chaveDia(ini),b=chaveDia(fim);
+ Object.keys(ms).forEach(function(id){var m=ms[id];if(!m||norPlaca(m.carro)!==kk)return;var di=String(m.dataIni||m.dataFim||'').slice(0,10),df=String(m.dataFim||m.dataIni||'9999').slice(0,10);if(!di||di>b||df<a)return;
+  toArr(m.blocos).forEach(function(bl){if(bl)tits.push(String(bl.titulo||'')+' '+toArr(bl.servicos).join(' '))})});
+ if(tits.length)return tits.some(function(t){return _PC_LANT.test(t)})&&!tits.some(function(t){return /mec[aâ]nic|motor|retif/i.test(t)})?'lant':'mec';
+ var ob=(GEST&&GEST.carros)||{},c=ob[pkDe]||null;var onde=String(c&&(c.oficinaOnde||(toArr(c.etapas).slice(-1)[0]||{}).onde)||'').trim();if(!onde)return 'mec';
+ var cont={l:0,m:0};Object.keys(ms).forEach(function(id){var m=ms[id];toArr(m&&m.blocos).forEach(function(bl){if(bl&&_pcMesmoMot(bl.nome,onde)){if(_PC_LANT.test(bl.titulo||''))cont.l++;else cont.m++}})});
+ return cont.l>cont.m?'lant':'mec'}
 function _pcEmprestimos(mapa,desde,ate,hojeD){
  var ob=(GEST&&GEST.carros)||{},segs=[];
  Object.keys(ob).forEach(function(pk){var c=ob[pk];if(!c)return;var k=norPlaca(c.placa||pk);
@@ -1904,10 +1917,11 @@ function _pcEmprestimos(mapa,desde,ate,hojeD){
   if(X){
    /* 1) recebimentos do motorista durante o empréstimo voltam para o carro dele */
    L.recs=L.recs.filter(function(r){var ini=r.ini||r.fim,fim=r.fim||r.ini;var dentro=fim>=g.desde&&ini<=g.ate;
-    if(dentro&&_pcMesmoMot(r.nome,g.para)){L.rec-=r.v;X.rec+=r.v;r.movDe=_pl(g.k);X.recs.push(r);X.sem[r.chave]=1;info.mov.push(r);return false}return true});
+    if(dentro&&_pcMesmoMot(r.nome,g.para)){L.rec-=r.v;X.rec+=r.v;if(r.cau){L.cau-=r.cau;X.cau=(X.cau||0)+r.cau}r.movDe=_pl(g.k);X.recs.push(r);X.sem[r.chave]=1;info.mov.push(r);return false}return true});
    L.sem={};L.recs.forEach(function(r){L.sem[r.chave]=1});
    /* 2) diária do contrato do carro dele × dias com o emprestado */
-   var sem=_pcSemanalDe(g.de);info.diaria=Math.round(sem/7);info.val=Math.round(sem*dias/7);
+   info.ofi=_pcTipoOficina(g.de,g.desde,g.ate);
+   var sem=info.ofi==='lant'?0:_pcSemanalDe(g.de);info.diaria=Math.round(sem/7);info.val=Math.round(sem*dias/7);
    if(info.val>0){L.rec+=info.val;X.rec-=info.val;X.emp.push({tipo:'saiu',para:g.para,k:_pl(g.k),dias:dias,val:info.val,diaria:info.diaria,desde:g.desde,ate:g.ate,ativo:!!g.ativo})}
   }
   L.emp.push(info)});
@@ -1924,8 +1938,12 @@ function pcDados(){
  todosCarros().forEach(function(c){var k=norPlaca(c.placa);if(!k||mapa[k])return;mapa[k]={c:c,k:k,rec:0,man:0,desp:0,nMan:0,sem:{},manut:[],contas:[],recs:[],emp:[]};lista.push(mapa[k])});
  var semPlaca=0;
  /* v79 (Hudson 22/11): guarda o detalhe de cada recebimento (semana, motorista, o que foi pago) para mostrar "de quê" */
- function addRec(d,quando,chave,p){var k=norPlaca(d&&d.plate);var t=0,its=[];toArr(d&&d.entries).forEach(function(e){if(e&&!e.del&&e.s==='paid'){t+=(Number(e.v)||0);its.push({t:String(e.d||'').trim(),v:Number(e.v)||0})}});if(!t)return;
-  if(mapa[k]){mapa[k].rec+=t;mapa[k].sem[chave]=1;mapa[k].recs.push({k:k,chave:chave,nome:String(d.name||'').trim(),v:t,its:its,ini:p?p.ini:null,fim:p?p.fim:quando})}else semPlaca+=t}
+ /* v82 (Hudson 22/11): CAUÇÃO não é receita — é depósito que volta para o motorista no fim do contrato.
+    Fica guardada à parte (cau) e aparece na tela do carro, mas não entra no "motorista pagou" nem no lucro. */
+ function _cauDe(e,k){var t=String(e.d||'');if(!/cau[cç][aã]o|cal[cç][aã]o/i.test(t))return 0;var v=Number(e.v)||0;
+  if(/di[aá]ria|semana|semanal|\+/i.test(t)){var c=_pcCarroCau(k);return c>0?Math.min(v,c):0}return v}
+ function addRec(d,quando,chave,p){var k=norPlaca(d&&d.plate);var t=0,cau=0,its=[];toArr(d&&d.entries).forEach(function(e){if(e&&!e.del&&e.s==='paid'){var v=Number(e.v)||0,cv=_cauDe(e,k);t+=v-cv;cau+=cv;its.push({t:String(e.d||'').trim(),v:v,cau:cv})}});if(!t&&!cau)return;
+  if(mapa[k]){mapa[k].rec+=t;mapa[k].cau=(mapa[k].cau||0)+cau;if(t)mapa[k].sem[chave]=1;mapa[k].recs.push({k:k,chave:chave,nome:String(d.name||'').trim(),v:t,cau:cau,its:its,ini:p?p.ini:null,fim:p?p.fim:quando})}else semPlaca+=t}
  if(SEM){
   toArr(SEM.history).filter(function(w){return w&&!w.del}).forEach(function(w){var p=periodoSemana(w);if(!p||p.fim<desde||p.fim>ate)return;toArr(w.drivers).forEach(function(d){if(d&&!d.del)addRec(d,p.fim,chaveDia(p.fim),p)})});
   if(ate>=hojeD)toArr(SEM.drivers).forEach(function(d){if(d&&!d.del)addRec(d,hojeD,'aberta',{ini:somaDias(hojeD,-6),fim:hojeD})});
@@ -1977,6 +1995,7 @@ function _pcDiasOficina(x,desde){
    Cada carro: quanto ENTROU, quanto GASTOU (só a nossa parte da manutenção + seguro) e o LUCRO. Sem "por semana" e sem média da frota. */
 /* ===== v80 (Hudson 22/11): CONFERÊNCIA — caça dado que pode estar dando informação errada, em TODOS os carros =====
    Nada é mudado sozinho: o app só aponta, explica e leva para o carro. */
+function _pcCarroCau(k){var c=_pcCarroG(k);var v=0;Object.keys((GEST&&GEST.contratos)||{}).forEach(function(id){var x=GEST.contratos[id];if(x&&norPlaca(x.carro)===k&&Number(x.caucao))v=Number(x.caucao)});if(!v&&c)v=Number(c.caucaoPadrao)||0;return Math.round(v*100)}
 function _pcCarroG(k){var ob=(GEST&&GEST.carros)||{};if(ob[k])return ob[k];var r=null;Object.keys(ob).forEach(function(pk){var c=ob[pk];if(c&&norPlaca(c.placa||pk)===k)r=c});return r}
 function pcConferir(D){var out=[],nomeP=function(x){return x.c.placa||x.k};
  D.ls.forEach(function(x){var g=_pcCarroG(x.k)||{},mot=String(g.motorista||'').trim(),sem=0;try{sem=_pcSemanalDe(x.k)}catch(e){}
@@ -2059,8 +2078,9 @@ function pcDet(k){
  h+='<div class="r2sub" style="margin-bottom:12px">de '+fmtDia(D.desde)+'/'+D.desde.getFullYear()+' até '+(D.ate>=_hoje0?'hoje':fmtDia(D.ate)+'/'+D.ate.getFullYear())+' ('+D.sem+' semana'+(D.sem>1?'s':'')+').</div>';
  var ex=[];
  var _emL=(x.emp||[]).filter(function(e){return e.para!==undefined&&!e.tipo});
- if(_emL.length)_emL.forEach(function(e){ex.push('Emprestado para <b>'+esc(e.para)+'</b> de '+fmtDia(e.desde)+(e.ativo?' até hoje':' a '+fmtDia(e.ate))+' (<b>'+e.dias+' dia'+(e.dias>1?'s':'')+'</b> no período)'+(e.de?': entra a diária do contrato do carro dele ('+esc(e.dePl)+'), <b>'+e.dias+' × '+fmt(e.diaria)+' = '+fmt(e.val)+'</b>.':' — sem carro dele na frota, fica o que ele pagou no Semanal.')+(e.mov.length?' O que ele pagou no Semanal nesse tempo ('+fmt(e.mov.reduce(function(s,r){return s+r.v},0))+') é do contrato do carro dele e foi para lá.':'')+'')});
+ if(_emL.length)_emL.forEach(function(e){ex.push('Emprestado para <b>'+esc(e.para)+'</b> de '+fmtDia(e.desde)+(e.ativo?' até hoje':' a '+fmtDia(e.ate))+' (<b>'+e.dias+' dia'+(e.dias>1?'s':'')+'</b> no período)'+(e.de?(e.ofi==='lant'?': o carro dele ('+esc(e.dePl)+') está em lanternagem/pintura, então ele continua pagando o carro dele e este não ganha diária.':': o carro dele ('+esc(e.dePl)+') está na oficina mecânica, então o que ele paga é deste carro — <b>'+e.dias+' × '+fmt(e.diaria)+' = '+fmt(e.val)+'</b> (semanal dele ÷ 7).'):' — sem carro dele na frota, fica o que ele pagou no Semanal.')+(e.mov.length?' O que ele pagou no Semanal nesse tempo ('+fmt(e.mov.reduce(function(s,r){return s+r.v},0))+') é do contrato do carro dele e foi para lá.':'')+'')});
  else ex.push('O motorista pagou <b>'+x.nSem+' de '+D.sem+' semana'+(D.sem>1?'s':'')+'</b>'+(x.semSem?' — <b>'+x.semSem+' sem pagamento</b>':'')+'.');
+ if(x.cau>0)ex.push('Caução recebida <b>'+fmt(x.cau)+'</b> não entra no lucro: é devolvida ao motorista no fim do contrato.');
  (x.emp||[]).filter(function(e){return e.tipo==='saiu'}).forEach(function(e){ex.push(esc(e.para)+' usou o <b>'+esc(e.k)+'</b> emprestado '+e.dias+' dia'+(e.dias>1?'s':'')+' enquanto este carro estava parado: <b>'+fmt(e.val)+'</b> da semanal dele foram para o carro emprestado.')});
  if(x.nMan)ex.push('Teve <b>'+x.nMan+' manutenç'+(x.nMan>1?'ões':'ão')+'</b>: a nossa parte foi <b>'+fmt(x.man)+'</b>'+((x.manTot||0)>x.man?' (de '+fmt(x.manTot)+' no total)':'')+(x.diasOf?', e o carro ficou <b>'+x.diasOf+' dias na oficina</b>':'')+'.');
  else ex.push('Não teve manutenção no período.');
@@ -2075,7 +2095,7 @@ function pcDet(k){
   _eL.forEach(function(e){h+='<div class="r2row"><div><div class="r2rowT">Diárias do empréstimo · '+esc(e.para)+'</div><div class="r2rowS">'+e.dias+' dia'+(e.dias>1?'s':'')+' × '+fmt(e.diaria)+' (semanal do contrato do '+esc(e.dePl)+' ÷ 7)</div></div><div class="r2val g">'+fmt(e.val)+'</div></div>'});
   _eX.forEach(function(e){h+='<div class="r2row"><div><div class="r2rowT">Foi para o carro emprestado ('+esc(e.k)+')</div><div class="r2rowS">'+esc(e.para)+' · '+e.dias+' dia'+(e.dias>1?'s':'')+' × '+fmt(e.diaria)+'</div></div><div class="r2val r">− '+fmt(e.val)+'</div></div>'});
   _rr.forEach(function(r){var per=r.chave==='aberta'?'semana aberta':(r.ini?fmtDia(r.ini)+' a ':'')+fmtDia(r.fim);
-   h+='<div class="r2row"><div><div class="r2rowT">'+esc(r.nome||'motorista')+' · '+per+(r.movDe?' · <span class="pcQuem">pago com a placa '+esc(r.movDe)+' (emprestado)</span>':'')+'</div><div class="r2rowS">'+r.its.map(function(i){return esc(i.t||'sem descrição')+' '+fmt(i.v)}).join(' · ')+'</div></div><div class="r2val g">'+fmt(r.v)+'</div></div>'});
+   h+='<div class="r2row"><div><div class="r2rowT">'+esc(r.nome||'motorista')+' · '+per+(r.movDe?' · <span class="pcQuem">pago com a placa '+esc(r.movDe)+' (emprestado)</span>':'')+'</div><div class="r2rowS">'+r.its.map(function(i){return esc(i.t||'sem descrição')+' '+fmt(i.v)+(i.cau?' (caução, não entra)':'')}).join(' · ')+'</div></div><div class="r2val g">'+fmt(r.v)+'</div></div>'});
   (x.emp||[]).filter(function(e){return !e.tipo&&e.mov.length}).forEach(function(e){h+='<div class="r2sub" style="margin-top:6px">'+fmt(e.mov.reduce(function(s,r){return s+r.v},0))+' que '+esc(e.para)+' pagou no Semanal com esta placa foram para o carro dele ('+esc(e.dePl)+'): caução e semana são do contrato dele.</div>'});
  }
  if(x.manut.length){h+='<div class="r2lbl" style="margin-top:16px"><span>Manutenções</span><span>'+x.manut.length+'</span></div>';
