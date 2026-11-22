@@ -134,7 +134,8 @@ main{padding:10px 12px 4px;max-width:720px}.hero,.card,.sectionCard,.detailsCard
    Regras: um número grande por tela; cor só para ganho (verde) e prejuízo (vermelho);
    explicação das contas fica num “Como calculei” fechado; ação principal embaixo. */
 header{padding:calc(6px + env(safe-area-inset-top)) 16px 8px!important}
-header .tabs,#verTag{display:none!important}
+header .tabs{display:none!important}
+#verTag{display:block!important;font-size:10px!important;color:#9AA0A6!important;margin:1px 0 0!important;letter-spacing:.05px}
 .eyebrow{display:none}
 .htitle{font-size:17px!important;letter-spacing:-.3px!important;font-weight:700!important}
 body{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
@@ -575,7 +576,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=83; var APP_DATE='22/11/2026';
+var APP_VER=84; var APP_DATE='22/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
