@@ -575,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=82; var APP_DATE='22/11/2026';
+var APP_VER=83; var APP_DATE='22/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -1938,9 +1938,10 @@ function pcDados(){
  todosCarros().forEach(function(c){var k=norPlaca(c.placa);if(!k||mapa[k])return;mapa[k]={c:c,k:k,rec:0,man:0,desp:0,nMan:0,sem:{},manut:[],contas:[],recs:[],emp:[]};lista.push(mapa[k])});
  var semPlaca=0;
  /* v79 (Hudson 22/11): guarda o detalhe de cada recebimento (semana, motorista, o que foi pago) para mostrar "de quê" */
- /* v82 (Hudson 22/11): CAUÇÃO não é receita — é depósito que volta para o motorista no fim do contrato.
-    Fica guardada à parte (cau) e aparece na tela do carro, mas não entra no "motorista pagou" nem no lucro. */
- function _cauDe(e,k){var t=String(e.d||'');if(!/cau[cç][aã]o|cal[cç][aã]o/i.test(t))return 0;var v=Number(e.v)||0;
+ /* v83 (Hudson 22/11): a caução CONTA como receita do carro no mês em que entrou (na maioria das vezes não volta:
+    é abatida em manutenção ou o motorista sai devendo). _cauDe fica desligada (sempre 0). */
+ var _PC_CAU_FORA=false;
+ function _cauDe(e,k){if(!_PC_CAU_FORA)return 0;var t=String(e.d||'');if(!/cau[cç][aã]o|cal[cç][aã]o/i.test(t))return 0;var v=Number(e.v)||0;
   if(/di[aá]ria|semana|semanal|\+/i.test(t)){var c=_pcCarroCau(k);return c>0?Math.min(v,c):0}return v}
  function addRec(d,quando,chave,p){var k=norPlaca(d&&d.plate);var t=0,cau=0,its=[];toArr(d&&d.entries).forEach(function(e){if(e&&!e.del&&e.s==='paid'){var v=Number(e.v)||0,cv=_cauDe(e,k);t+=v-cv;cau+=cv;its.push({t:String(e.d||'').trim(),v:v,cau:cv})}});if(!t&&!cau)return;
   if(mapa[k]){mapa[k].rec+=t;mapa[k].cau=(mapa[k].cau||0)+cau;if(t)mapa[k].sem[chave]=1;mapa[k].recs.push({k:k,chave:chave,nome:String(d.name||'').trim(),v:t,cau:cau,its:its,ini:p?p.ini:null,fim:p?p.fim:quando})}else semPlaca+=t}
