@@ -575,7 +575,7 @@ html.gsplOn.gsplFull,html.gsplOn.gsplFull body,html.gsplOn.gsplFull body.locked{
 
 <script>
 /* ============ APP RESULTADO — consolida Semanal + Despesas + Gestão ============ */
-var APP_VER=80; var APP_DATE='22/11/2026';
+var APP_VER=81; var APP_DATE='22/11/2026';
 var KEY='guimas_consolidado_v1';
 var TAB='saldo', askCb=null, BM_ID=null;
 /* estado PRÓPRIO (único que este app escreve) */
@@ -2038,7 +2038,6 @@ function viewCarros(){
    _r2Eq('Os motoristas pagaram','<span class="g">'+fmt(tr)+'</span>'+(tr>0?' <small class="pcPct">100%</small>':''))+_r2Eq('Manutenção (só a nossa parte)','<span class="r">− '+fmt(tm)+'</span>'+_pcP(tm,tr))+(tmt>tm?_r2Eq('<small>a manutenção inteira foi '+fmt(tmt)+'; os motoristas pagaram '+fmt(tmt-tm)+'</small>',''):'')+_r2Eq('Seguros dos carros','<span class="r">− '+fmt(td)+'</span>'+_pcP(td,tr))+_r2Eq('Lucro','<span class="'+_r2Cls(tl)+'">'+fmt(tl)+'</span>'+_pcP(tl,tr),'tot')+
   (tr>0?'<div class="r2sub" style="margin-top:6px">As porcentagens são sobre o que os motoristas pagaram.</div>':'')+
   '</div></details></section>';
- h+=pcConfHtml(D);
  ls.sort(function(a,b){return a.lucro-b.lucro});
  var mx=1;ls.forEach(function(x){mx=Math.max(mx,x.rec,x.gasto)});
  h+='<div class="pcGrupoT">Do pior para o melhor <b>'+ls.length+'</b></div><section class="r2card pcLista">';
@@ -2058,7 +2057,6 @@ function pcDet(k){
  h+='<div class="r2big '+_r2Cls(x.lucro)+'" style="font-size:32px;margin-top:10px">'+fmt(x.lucro)+'</div>';
  var _hoje0=new Date();_hoje0=new Date(_hoje0.getFullYear(),_hoje0.getMonth(),_hoje0.getDate());
  h+='<div class="r2sub" style="margin-bottom:12px">de '+fmtDia(D.desde)+'/'+D.desde.getFullYear()+' até '+(D.ate>=_hoje0?'hoje':fmtDia(D.ate)+'/'+D.ate.getFullYear())+' ('+D.sem+' semana'+(D.sem>1?'s':'')+').</div>';
- h+=pcConfHtml(D,k);
  var ex=[];
  var _emL=(x.emp||[]).filter(function(e){return e.para!==undefined&&!e.tipo});
  if(_emL.length)_emL.forEach(function(e){ex.push('Emprestado para <b>'+esc(e.para)+'</b> de '+fmtDia(e.desde)+(e.ativo?' até hoje':' a '+fmtDia(e.ate))+' (<b>'+e.dias+' dia'+(e.dias>1?'s':'')+'</b> no período)'+(e.de?': entra a diária do contrato do carro dele ('+esc(e.dePl)+'), <b>'+e.dias+' × '+fmt(e.diaria)+' = '+fmt(e.val)+'</b>.':' — sem carro dele na frota, fica o que ele pagou no Semanal.')+(e.mov.length?' O que ele pagou no Semanal nesse tempo ('+fmt(e.mov.reduce(function(s,r){return s+r.v},0))+') é do contrato do carro dele e foi para lá.':'')+'')});
